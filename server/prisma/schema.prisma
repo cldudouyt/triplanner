@@ -1,0 +1,275 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model User {
+  id            Int            @id @default(autoincrement())
+  email         String         @unique
+  password      String
+  firstName     String
+  lastName      String
+  isAdmin       Boolean        @default(false)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  refreshTokens           RefreshToken[]
+  passwordResetCodes      PasswordResetCode[]
+  competitions            Competition[]
+  trainingPlans           TrainingPlan[]
+  stravaConnection        StravaConnection?
+  notificationPreferences NotificationPreferences?
+  wellnessLogs            WellnessLog[]
+  personalRecords         PersonalRecord[]
+  achievements            UserAchievement[]
+  seasonGoals             SeasonGoal[]
+}
+
+model StravaConnection {
+  id           Int      @id @default(autoincrement())
+  userId       Int      @unique
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  athleteId    Int
+  accessToken  String
+  refreshToken String
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model NotificationPreferences {
+  id                    Int      @id @default(autoincrement())
+  userId                Int      @unique
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  emailSessionReminder  Boolean  @default(true)
+  emailCompetitionReminder Boolean @default(true)
+  reminderDaysBefore    Int      @default(1)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+}
+
+model RefreshToken {
+  id        Int      @id @default(autoincrement())
+  token     String   @unique
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([token])
+}
+
+model PasswordResetCode {
+  id        Int      @id @default(autoincrement())
+  code      String
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model Competition {
+  id               Int      @id @default(autoincrement())
+  userId           Int
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  name             String
+  date             DateTime
+  location         String?
+  type             String
+  subType          String
+
+  swimDistance      Float?
+  bikeDistance      Float?
+  runDistance       Float?
+
+  chronoObjective  String?
+  result           String?
+
+  registrationLink String?
+  notes            String?
+  priority         String   @default("B")
+  budget           Float?
+  accommodation    String?
+  transport        String?
+  status           String   @default("planned")
+  startTime        String?
+
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  equipmentItems   EquipmentItem[]
+  planCompetitions PlanCompetition[]
+
+  @@index([userId])
+  @@index([date])
+  @@index([userId, date])
+}
+
+model EquipmentItem {
+  id            Int         @id @default(autoincrement())
+  competitionId Int
+  competition   Competition @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+
+  name          String
+  checked       Boolean     @default(false)
+  category      String?
+
+  @@index([competitionId])
+}
+
+model TrainingPlan {
+  id            Int          @id @default(autoincrement())
+  userId        Int
+  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  name          String
+  description   String?
+  targetType    String
+  durationWeeks Int
+  level         String?
+  weeklyHours   Int?
+  isTemplate    Boolean      @default(false)
+  isPublic      Boolean      @default(false)
+  shareCode     String?      @unique
+
+  startDate     DateTime?
+  endDate       DateTime?
+
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  sessions      TrainingSession[]
+  competitions  PlanCompetition[]
+
+  @@index([userId])
+  @@index([shareCode])
+}
+
+model PlanCompetition {
+  id            Int          @id @default(autoincrement())
+  planId        Int
+  plan          TrainingPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  competitionId Int
+  competition   Competition  @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+
+  isPrimary     Boolean      @default(false)
+  order         Int          @default(0)
+
+  @@unique([planId, competitionId])
+  @@index([planId])
+  @@index([competitionId])
+}
+
+model TrainingSession {
+  id             Int          @id @default(autoincrement())
+  planId         Int
+  plan           TrainingPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  weekNumber     Int
+  dayOfWeek      Int
+  date           DateTime?
+
+  type           String
+  title          String?
+  description    String?
+  duration       Int?
+  distance       Float?
+  intensity      String?
+
+  completed      Boolean      @default(false)
+  actualDuration Int?
+  actualDistance  Float?
+  notes          String?
+
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([planId])
+  @@index([planId, weekNumber])
+  @@index([date])
+}
+
+model WellnessLog {
+  id             Int      @id @default(autoincrement())
+  userId         Int
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  date           DateTime
+  sleepQuality   Int      // 1-5
+  sleepHours     Float?
+  fatigue        Int      // 1-5 (1=fresh, 5=exhausted)
+  mood           Int      // 1-5
+  muscleSoreness Int      // 1-5 (1=none, 5=severe)
+  stress         Int      // 1-5
+  restingHR      Int?     // bpm
+  hrv            Int?     // ms
+  notes          String?
+  readinessScore Int      // computed 0-100
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([userId, date])
+  @@index([userId])
+  @@index([userId, date])
+}
+
+model PersonalRecord {
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  sport       String   // swim, bike, run
+  category    String   // e.g. "5k", "10k", "half-marathon", "marathon", "1500m", "400m", "sprint", "olympic"
+  value       Float    // time in seconds or distance in meters
+  unit        String   // "time" or "distance"
+  date        DateTime
+  notes       String?
+  sessionId   Int?
+  competitionId Int?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+  @@index([userId, sport])
+  @@index([userId, sport, category])
+}
+
+model UserAchievement {
+  id            Int      @id @default(autoincrement())
+  userId        Int
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  achievementId String   // e.g. "first_session", "streak_7", "distance_100k"
+  unlockedAt    DateTime @default(now())
+  progress      Int      @default(100) // 0-100 for partial progress
+
+  @@unique([userId, achievementId])
+  @@index([userId])
+}
+
+model SeasonGoal {
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sport       String   // swim | bike | run | strength | all
+  year        Int
+  type        String   // distance | duration | sessions
+  targetValue Float
+  unit        String   // km | hours | sessions
+  label       String?
+
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+  @@index([userId, year])
+}

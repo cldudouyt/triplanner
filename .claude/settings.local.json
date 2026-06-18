@@ -1,0 +1,29 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node:*)",
+      "Bash(npm --version:*)",
+      "WebSearch",
+      "Bash(npm install:*)",
+      "Bash(npm create:*)",
+      "Bash(npx prisma:*)",
+      "WebFetch(domain:www.prisma.io)",
+      "Bash(npx tsx:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npx vite build)",
+      "Bash(npm run build:*)",
+      "Bash(dir \"C:\\\\dev\\\\TEST_Claude\\\\client\\\\node_modules\\\\lucide-react\")",
+      "Bash(npm run test:*)",
+      "Bash(DATABASE_URL=\"file:./prisma/test.db\" npx prisma db push:*)",
+      "Bash(npm run admin:create:*)",
+      "Bash(npx vitest run)",
+      "WebFetch(domain:www.triathlete.com)",
+      "WebFetch(domain:www.220triathlon.com)",
+      "Bash(if exist \"C:\\\\dev\\\\TEST_Claude\\\\server\\\\.env\" type \"C:\\\\dev\\\\TEST_Claude\\\\server\\\\.env\")",
+      "Bash(ls:*)",
+      "Bash(sqlite3:*)",
+      "WebFetch(domain:stormotion.io)",
+      "Bash(dir:*)"
+    ]
+  }
+}

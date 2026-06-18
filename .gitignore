@@ -1,0 +1,26 @@
+node_modules/
+dist/
+.env
+*.db
+*.db-journal
+.DS_Store
+Thumbs.db
+nul
+
+.vercel
+.env*.local
+
+# Prisma generated client (régénéré via `npx prisma generate`)
+server/generated/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Build cache
+.vite/
+coverage/
+
+# Test artifacts
+client/test-results/
+client/playwright-report/
