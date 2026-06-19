@@ -3,6 +3,30 @@
 Ce fichier est lu automatiquement par Claude quand il travaille dans le dossier `client/`.
 Il définit les règles de design à respecter impérativement sur chaque composant, page ou PR.
 
+> **Design source** : `specs/design-system.md` — export Claude Design validé.  
+> Pour les détails complets des tokens CSS, voir cette spec.
+
+---
+
+## Tokens principaux (NEW — remplace blue par orange)
+
+```
+Couleur primaire  : orange-600 (#EA580C) → orange-400 (#FB923C) en gradient
+Police            : Geist (Google Fonts) — PAS Inter
+Fond page         : #F4F5F7 + radial-gradient orange subtil (.bg-page)
+Fond surface      : #FFFFFF
+Bordures          : #ECEDF0 (border-gray-200 Tailwind acceptable)
+Texte principal   : #1A1D27 (text-gray-900 en Tailwind)
+Texte secondaire  : #6B7280 (text-gray-500)
+Texte muet        : #9CA3AF (text-gray-400)
+```
+
+**Gradient primaire CTA** :
+```css
+background: linear-gradient(135deg, #FB923C, #EA580C);
+box-shadow: 0 10px 22px -8px rgba(234,88,12,.6);
+```
+
 ---
 
 ## Principe fondamental
@@ -32,7 +56,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card'
 ```tsx
 import { Button } from '@/components/ui/Button'
 
-<Button>                        // variant="primary" (gradient bleu)
+<Button>                        // variant="primary" (gradient orange #FB923C→#EA580C)
 <Button variant="secondary">    // gris neutre
 <Button variant="outline">      // bordure + fond transparent
 <Button variant="ghost">        // texte seul, hover discret
@@ -352,6 +376,55 @@ Icônes courantes dans ce projet :
 
 ---
 
+## Patterns spéciaux (Claude Design)
+
+### Glassmorphism header sticky
+```tsx
+<header className="sticky top-0 z-30 bg-white/70 dark:bg-slate-900/80 backdrop-blur-sm
+                   border-b border-gray-200 dark:border-slate-800">
+```
+
+### Banner IA (gradient orange avec orbe)
+```tsx
+<div className="relative overflow-hidden rounded-2xl p-6"
+     style={{ background: 'linear-gradient(135deg,#FB923C 0%,#F97316 52%,#EA580C 100%)',
+              boxShadow: '0 22px 54px -26px rgba(234,88,12,.6)' }}>
+  {/* Orbe décoratif */}
+  <div className="absolute -top-16 -right-8 w-56 h-56 rounded-full bg-white/10" />
+  <div className="relative">...</div>
+</div>
+```
+
+### Note IA inline
+```tsx
+<div className="flex gap-2 p-3 rounded-xl border"
+     style={{ background: 'rgba(249,115,22,.07)', borderColor: 'rgba(249,115,22,.24)' }}>
+  <Sparkles className="w-4 h-4 text-orange-600 flex-none mt-0.5" />
+  <span className="text-sm text-orange-900 dark:text-orange-200">{aiNote}</span>
+</div>
+```
+
+### Dot animé statut live
+```tsx
+<span className="w-2 h-2 rounded-full bg-emerald-500 animate-dot" />
+/* CSS: @keyframes tpDot { 0%,100%{opacity:1;scale:1} 50%{opacity:.5;scale:.6} } */
+```
+
+### Widget sidebar objectif
+```tsx
+<div className="mt-2 p-3 rounded-2xl"
+     style={{ background: 'linear-gradient(150deg,rgba(249,115,22,.10),rgba(249,115,22,.04))',
+              border: '1px solid rgba(249,115,22,.18)' }}>
+  <div className="text-xs font-bold text-orange-700">Compétition A · dans {n} jours</div>
+  <div className="mt-2 h-1.5 rounded-full bg-orange-100 overflow-hidden">
+    <div className="h-full rounded-full"
+         style={{ width: `${pct}%`, background: 'linear-gradient(90deg,#FB923C,#EA580C)' }} />
+  </div>
+</div>
+```
+
+---
+
 ## Règles absolues
 
 1. **Ne jamais créer** un composant Button, Card, Badge, Modal custom — utiliser ceux de `ui/`.
@@ -361,3 +434,4 @@ Icônes courantes dans ce projet :
 5. **`SPORT_COLORS`** pour les couleurs sport — jamais de valeur hex en dur.
 6. **Skeleton avant EmptyState** — l'ordre `isLoading → isEmpty → content` est impératif.
 7. **Pas de `style={{color: '...'}}` pour les couleurs Tailwind** — seulement pour les couleurs dynamiques (`SPORT_COLORS.swim.color`).
+8. **Couleur primaire = orange**, pas bleu — tout nouveau CTA utilise `bg-gradient-to-br from-orange-400 to-orange-600`.
