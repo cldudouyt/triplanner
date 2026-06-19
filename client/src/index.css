@@ -29,9 +29,9 @@
   --color-brick: #ea580c;
 
   /* Accent colors */
-  --color-primary: #3b82f6;
-  --color-primary-hover: #2563eb;
-  --color-success: #22c55e;
+  --color-primary: #EA580C;
+  --color-primary-hover: #C2410C;
+  --color-success: #059669;
   --color-warning: #f59e0b;
   --color-danger: #ef4444;
 }
@@ -65,8 +65,8 @@
   --color-brick: #fb923c;
 
   /* Accent colors */
-  --color-primary: #60a5fa;
-  --color-primary-hover: #3b82f6;
+  --color-primary: #FB923C;
+  --color-primary-hover: #EA580C;
   --color-success: #4ade80;
   --color-warning: #fbbf24;
   --color-danger: #f87171;
@@ -80,8 +80,22 @@ body {
   min-height: 100vh;
   background-color: var(--color-bg-secondary);
   color: var(--color-text-primary);
-  font-family: system-ui, -apple-system, sans-serif;
+  font-family: 'Geist', system-ui, -apple-system, sans-serif;
   transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+/* Page background with subtle orange radial gradient */
+.bg-page {
+  background:
+    radial-gradient(120% 80% at 100% 0%, rgba(249,115,22,.08), transparent 52%),
+    radial-gradient(100% 80% at 0% 100%, rgba(148,163,184,.10), transparent 55%),
+    #F4F5F7;
+}
+
+.dark .bg-page {
+  background:
+    radial-gradient(120% 80% at 100% 0%, rgba(249,115,22,.05), transparent 52%),
+    #0f172a;
 }
 
 #root {
@@ -237,6 +251,12 @@ body {
   }
 }
 
+/* Status dot pulse (live badge) */
+@keyframes tpDot {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(.6); opacity: .5; }
+}
+
 /* Shake */
 @keyframes shake {
   0%, 100% {
@@ -311,6 +331,10 @@ body {
 
 .animate-progress {
   animation: progressFill 1s ease-out forwards;
+}
+
+.animate-dot {
+  animation: tpDot 1.7s ease-in-out infinite;
 }
 
 /* ============================================

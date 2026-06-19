@@ -10,12 +10,12 @@ export default function AppLayout() {
   const { user } = useAuth()
 
   return (
-    <div className="flex min-h-screen bg-gray-50 dark:bg-slate-900 transition-colors">
+    <div className="flex min-h-screen bg-page dark:bg-slate-900 transition-colors">
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       <div className="flex-1 flex flex-col min-w-0">
         {/* Mobile header */}
-        <header className="lg:hidden sticky top-0 z-30 bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-800 px-4 py-3 transition-colors">
+        <header className="lg:hidden sticky top-0 z-30 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border-b border-gray-200 dark:border-slate-800 px-4 py-3 transition-colors">
           <div className="flex items-center justify-between">
             <button
               onClick={() => setSidebarOpen(true)}
@@ -25,8 +25,8 @@ export default function AppLayout() {
             </button>
 
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-md">
-                <span className="text-white font-bold text-sm">T</span>
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center shadow-md shadow-orange-600/30">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M3 17l4-8 4 5 3-7 4 10"/></svg>
               </div>
               <span className="font-semibold text-gray-900 dark:text-gray-100">Tri Planner</span>
             </div>

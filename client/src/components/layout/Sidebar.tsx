@@ -55,8 +55,8 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         <div className="p-5 border-b border-gray-200 dark:border-slate-800">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/30">
-                <span className="text-white font-bold text-lg">T</span>
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center shadow-lg shadow-orange-600/40">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M3 17l4-8 4 5 3-7 4 10"/></svg>
               </div>
               <div>
                 <h1 className="text-lg font-bold text-gray-900 dark:text-gray-100">Tri Planner</h1>
@@ -81,15 +81,21 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
               end={to === '/'}
               onClick={handleNavClick}
               className={({ isActive }) =>
-                `flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${
+                `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${
                   isActive
-                    ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-500/30'
-                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-800 hover:text-gray-900 dark:hover:text-gray-200'
+                    ? 'bg-orange-500/10 text-gray-900 dark:text-gray-100 shadow-[0_0_0_1px_rgba(249,115,22,.28),0_8px_22px_-10px_rgba(234,88,12,.4)]'
+                    : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-800 hover:text-gray-900 dark:hover:text-gray-200'
                 }`
               }
             >
-              <Icon className="h-5 w-5" />
-              {label}
+              {({ isActive }) => (
+                <>
+                  <span className={`w-[30px] h-[30px] flex-none rounded-[9px] flex items-center justify-center transition-all duration-200 ${isActive ? 'bg-gradient-to-br from-orange-400 to-orange-600 text-white shadow-md shadow-orange-600/30' : 'bg-gray-100 dark:bg-slate-800 text-gray-400 dark:text-gray-500'}`}>
+                    <Icon className="h-4 w-4" />
+                  </span>
+                  {label}
+                </>
+              )}
             </NavLink>
           ))}
 
@@ -99,14 +105,16 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
               to="/admin"
               onClick={handleNavClick}
               className={({ isActive }) =>
-                `flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${
+                `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${
                   isActive
-                    ? 'bg-gradient-to-r from-purple-500 to-purple-600 text-white shadow-lg shadow-purple-500/30'
+                    ? 'bg-purple-500/10 text-purple-700 dark:text-purple-300'
                     : 'text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20'
                 }`
               }
             >
-              <Shield className="h-5 w-5" />
+              <span className="w-[30px] h-[30px] flex-none rounded-[9px] bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
+                <Shield className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+              </span>
               Administration
             </NavLink>
           )}

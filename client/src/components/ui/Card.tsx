@@ -15,7 +15,7 @@ export function Card({ children, className, hover = false, padding = 'md', anima
       className={clsx(
         'rounded-2xl border bg-white transition-all duration-300',
         'border-gray-200 dark:border-slate-700 dark:bg-slate-800',
-        hover && 'hover:shadow-lg hover:-translate-y-1 hover:shadow-gray-200/50 dark:hover:shadow-slate-900/50',
+        hover && 'hover:shadow-[0_12px_32px_-20px_rgba(17,24,39,.25)] hover:-translate-y-1',
         padding === 'none' && 'p-0',
         padding === 'sm' && 'p-4',
         padding === 'md' && 'p-6',

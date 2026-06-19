@@ -33,64 +33,70 @@ export const STATUSES = [
   { value: 'dnf', label: 'DNF' },
 ] as const
 
-// Sport colors - consistent palette across the app
+// Sport colors - consistent palette across the app (aligned with Claude Design)
 export const SPORT_COLORS = {
   swim: {
     name: 'Natation',
-    color: '#06b6d4', // cyan-500
+    color: '#0891B2',     // cyan-600 (Claude Design)
     colorDark: '#22d3ee', // cyan-400
-    bg: 'bg-cyan-500',
-    bgLight: 'bg-cyan-100 dark:bg-cyan-900/30',
+    tint: 'rgba(8,145,178,.12)',
+    bg: 'bg-cyan-600',
+    bgLight: 'bg-cyan-50 dark:bg-cyan-900/20',
     text: 'text-cyan-600 dark:text-cyan-400',
-    border: 'border-cyan-500',
+    border: 'border-cyan-600',
     icon: '🏊',
   },
   bike: {
     name: 'Vélo',
-    color: '#22c55e', // green-500
-    colorDark: '#4ade80', // green-400
-    bg: 'bg-green-500',
-    bgLight: 'bg-green-100 dark:bg-green-900/30',
-    text: 'text-green-600 dark:text-green-400',
-    border: 'border-green-500',
+    color: '#059669',     // emerald-600 (Claude Design)
+    colorDark: '#34d399', // emerald-400
+    tint: 'rgba(5,150,105,.12)',
+    bg: 'bg-emerald-600',
+    bgLight: 'bg-emerald-50 dark:bg-emerald-900/20',
+    text: 'text-emerald-600 dark:text-emerald-400',
+    border: 'border-emerald-600',
     icon: '🚴',
   },
   run: {
     name: 'Course',
-    color: '#f97316', // orange-500
+    color: '#EA580C',     // orange-600 (Claude Design)
     colorDark: '#fb923c', // orange-400
-    bg: 'bg-orange-500',
-    bgLight: 'bg-orange-100 dark:bg-orange-900/30',
+    tint: 'rgba(234,88,12,.12)',
+    bg: 'bg-orange-600',
+    bgLight: 'bg-orange-50 dark:bg-orange-900/20',
     text: 'text-orange-600 dark:text-orange-400',
-    border: 'border-orange-500',
+    border: 'border-orange-600',
     icon: '🏃',
   },
   strength: {
     name: 'Renforcement',
     color: '#a855f7', // purple-500
-    colorDark: '#c084fc', // purple-400
+    colorDark: '#c084fc',
+    tint: 'rgba(168,85,247,.12)',
     bg: 'bg-purple-500',
-    bgLight: 'bg-purple-100 dark:bg-purple-900/30',
+    bgLight: 'bg-purple-50 dark:bg-purple-900/20',
     text: 'text-purple-600 dark:text-purple-400',
     border: 'border-purple-500',
     icon: '💪',
   },
   rest: {
     name: 'Repos',
-    color: '#94a3b8', // slate-400
-    colorDark: '#94a3b8', // slate-400
+    color: '#94a3b8',
+    colorDark: '#94a3b8',
+    tint: 'rgba(100,116,139,.10)',
     bg: 'bg-slate-400',
     bgLight: 'bg-slate-100 dark:bg-slate-800',
-    text: 'text-slate-600 dark:text-slate-400',
+    text: 'text-slate-500 dark:text-slate-400',
     border: 'border-slate-400',
     icon: '😴',
   },
   brick: {
     name: 'Enchaînement',
-    color: '#ea580c', // orange-600
-    colorDark: '#fb923c', // orange-400
+    color: '#ea580c',
+    colorDark: '#fb923c',
+    tint: 'rgba(234,88,12,.12)',
     bg: 'bg-orange-600',
-    bgLight: 'bg-orange-100 dark:bg-orange-900/30',
+    bgLight: 'bg-orange-50 dark:bg-orange-900/20',
     text: 'text-orange-700 dark:text-orange-400',
     border: 'border-orange-600',
     icon: '🔥',

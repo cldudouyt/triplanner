@@ -12,12 +12,12 @@ interface ProgressBarProps {
 
 const colorClasses = {
   blue: 'bg-blue-500 dark:bg-blue-400',
-  green: 'bg-green-500 dark:bg-green-400',
+  green: 'bg-emerald-600 dark:bg-emerald-400',
   orange: 'bg-orange-500 dark:bg-orange-400',
   purple: 'bg-purple-500 dark:bg-purple-400',
   red: 'bg-red-500 dark:bg-red-400',
-  cyan: 'bg-cyan-500 dark:bg-cyan-400',
-  gradient: 'bg-gradient-to-r from-blue-500 to-blue-600',
+  cyan: 'bg-cyan-600 dark:bg-cyan-400',
+  gradient: 'bg-gradient-to-r from-orange-400 to-orange-600',
 }
 
 const sizeClasses = {

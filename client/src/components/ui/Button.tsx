@@ -15,11 +15,11 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 const variants: Record<ButtonVariant, string> = {
   primary: `
-    bg-gradient-to-r from-blue-500 to-blue-600 text-white
-    shadow-lg shadow-blue-500/30
-    hover:shadow-xl hover:shadow-blue-500/40 hover:from-blue-600 hover:to-blue-700
-    dark:from-blue-600 dark:to-blue-700 dark:shadow-blue-600/20
-    dark:hover:from-blue-500 dark:hover:to-blue-600
+    bg-gradient-to-br from-orange-400 to-orange-600 text-white
+    shadow-lg shadow-orange-500/30
+    hover:shadow-xl hover:shadow-orange-500/40 hover:from-orange-500 hover:to-orange-700
+    active:scale-[.98]
+    dark:from-orange-500 dark:to-orange-700 dark:shadow-orange-600/20
   `,
   secondary: `
     bg-gray-100 text-gray-900 hover:bg-gray-200
@@ -58,7 +58,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         disabled={disabled || loading}
         className={clsx(
           'inline-flex items-center justify-center gap-2 font-medium transition-all duration-200',
-          'focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:ring-offset-2',
+          'focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:ring-offset-2',
           'dark:focus:ring-offset-slate-900',
           'disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none',
           variants[variant],
