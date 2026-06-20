@@ -2,6 +2,8 @@ import { createBrowserRouter } from 'react-router-dom'
 import ProtectedRoute from '@/components/layout/ProtectedRoute'
 import AdminRoute from '@/components/layout/AdminRoute'
 import AppLayout from '@/components/layout/AppLayout'
+import ClubCoachLayout from '@/components/layout/ClubCoachLayout'
+import ClubAthleteLayout from '@/components/layout/ClubAthleteLayout'
 import AdminLayout from '@/components/layout/AdminLayout'
 import LoginPage from '@/pages/LoginPage'
 import RegisterPage from '@/pages/RegisterPage'
@@ -28,6 +30,12 @@ import GoalsPage from '@/pages/GoalsPage'
 import RaceDayPage from '@/pages/RaceDayPage'
 import SharedPlanPage from '@/pages/SharedPlanPage'
 import PublicPlansPage from '@/pages/PublicPlansPage'
+import ClubPage from '@/pages/ClubPage'
+import ClubCoachPage from '@/pages/ClubCoachPage'
+import ClubAthletePage from '@/pages/ClubAthletePage'
+import MessagesPage from '@/pages/MessagesPage'
+import ProfilePage from '@/pages/ProfilePage'
+import NotFoundPage from '@/pages/NotFoundPage'
 
 export const router = createBrowserRouter([
   { path: '/login', element: <LoginPage /> },
@@ -58,10 +66,26 @@ export const router = createBrowserRouter([
           { path: '/settings', element: <SettingsPage /> },
           { path: '/race-day/:id', element: <RaceDayPage /> },
           { path: '/discover', element: <PublicPlansPage /> },
+          { path: '/club', element: <ClubPage /> },
+          { path: '/messages', element: <MessagesPage /> },
+          { path: '/profil', element: <ProfilePage /> },
+        ],
+      },
+      {
+        element: <ClubCoachLayout />,
+        children: [
+          { path: '/club/coach', element: <ClubCoachPage /> },
+        ],
+      },
+      {
+        element: <ClubAthleteLayout />,
+        children: [
+          { path: '/club/athlete', element: <ClubAthletePage /> },
         ],
       },
     ],
   },
+  { path: '*', element: <NotFoundPage /> },
   {
     element: <AdminRoute />,
     children: [

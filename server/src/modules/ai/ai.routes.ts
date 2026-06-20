@@ -1,5 +1,6 @@
 import { Router } from 'express'
 import { z } from 'zod'
+import rateLimit from 'express-rate-limit'
 import * as controller from './ai.controller.js'
 import { authMiddleware } from '../../middleware/auth.js'
 import { validate } from '../../middleware/validate.js'
@@ -24,9 +25,18 @@ const chatSchema = z.object({
   history: z.array(z.object({ role: z.enum(['user', 'assistant']), content: z.string() })).max(20).default([]),
 })
 
+const aiLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 10,
+  message: { error: 'Trop de requêtes IA. Réessaie dans une minute.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+})
+
 const router = Router()
 
 router.use(authMiddleware)
+router.use(aiLimiter)
 router.get('/status', controller.getStatus)
 router.post('/generate-plan', validate(generatePlanSchema), controller.generatePlan)
 router.post('/analyze-competition', validate(analyzeCompetitionSchema), controller.analyzeCompetition)

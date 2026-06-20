@@ -62,6 +62,53 @@ export async function findById(userId: number, id: number) {
   })
 }
 
+export async function findActive(userId: number) {
+  const now = new Date()
+  // Plan en cours (startDate passée, endDate future)
+  let plan = await prisma.trainingPlan.findFirst({
+    where: {
+      userId,
+      isTemplate: false,
+      startDate: { lte: now },
+      endDate: { gte: now },
+    },
+    include: {
+      sessions: { orderBy: [{ weekNumber: 'asc' }, { dayOfWeek: 'asc' }] },
+      competitions: {
+        include: { competition: { select: { id: true, name: true, date: true, type: true, priority: true } } },
+        orderBy: [{ isPrimary: 'desc' }, { order: 'asc' }],
+      },
+    },
+  })
+
+  // Fallback : plan le plus récent si aucun "en cours"
+  if (!plan) {
+    plan = await prisma.trainingPlan.findFirst({
+      where: { userId, isTemplate: false },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        sessions: { orderBy: [{ weekNumber: 'asc' }, { dayOfWeek: 'asc' }] },
+        competitions: {
+          include: { competition: { select: { id: true, name: true, date: true, type: true, priority: true } } },
+          orderBy: [{ isPrimary: 'desc' }, { order: 'asc' }],
+        },
+      },
+    })
+  }
+
+  if (!plan) return null
+
+  // Calcul de la semaine courante dans le plan
+  let currentWeek = 1
+  let totalWeeks = plan.durationWeeks ?? 1
+  if (plan.startDate) {
+    const diffMs = now.getTime() - new Date(plan.startDate).getTime()
+    currentWeek = Math.max(1, Math.min(Math.ceil(diffMs / (7 * 24 * 60 * 60 * 1000)), totalWeeks))
+  }
+
+  return { ...plan, currentWeek, totalWeeks }
+}
+
 export async function create(userId: number, input: CreatePlanInput) {
   const endDate = input.startDate
     ? new Date(new Date(input.startDate).getTime() + input.durationWeeks * 7 * 24 * 60 * 60 * 1000)

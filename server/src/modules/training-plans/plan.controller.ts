@@ -1,6 +1,11 @@
 import { Request, Response } from 'express'
 import * as planService from './plan.service.js'
 
+export async function findActive(req: Request, res: Response) {
+  const plan = await planService.findActive(req.user!.userId)
+  res.json(plan ?? null)
+}
+
 export async function findAll(req: Request, res: Response) {
   const page = parseInt(req.query.page as string) || 1
   const limit = parseInt(req.query.limit as string) || 50

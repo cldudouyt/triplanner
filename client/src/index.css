@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* Force class-based dark mode (ThemeContext adds .dark to <html>) */
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* ============================================
    CSS Variables - Light Mode (default)
    ============================================ */

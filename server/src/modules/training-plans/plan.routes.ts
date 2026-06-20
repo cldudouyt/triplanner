@@ -12,6 +12,7 @@ router.get('/shared/:shareCode', controller.getShared)
 
 // Protected routes
 router.use(authMiddleware)
+router.get('/active', controller.findActive)
 router.get('/', controller.findAll)
 router.get('/templates', controller.findTemplates)
 router.get('/:id', controller.findById)

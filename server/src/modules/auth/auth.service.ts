@@ -1,7 +1,7 @@
 import prisma from '../../config/database.js'
 import { hashPassword, comparePassword } from '../../utils/password.js'
 import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '../../utils/jwt.js'
-import { sendPasswordResetEmail } from '../../utils/email.js'
+import { sendPasswordResetEmail, sendEmail } from '../../utils/email.js'
 import { config } from '../../config/env.js'
 import crypto from 'node:crypto'
 import type { RegisterInput, LoginInput, ForgotPasswordInput, ResetPasswordInput } from './auth.schema.js'
@@ -22,6 +22,26 @@ export async function register(input: RegisterInput) {
     },
     select: { id: true, email: true, firstName: true, lastName: true },
   })
+
+  // Welcome email — non-blocking
+  try {
+    await sendEmail({
+      to: user.email,
+      subject: 'Bienvenue sur TriPlanner 👋',
+      text: `Bonjour ${user.firstName},\n\nTon compte TriPlanner est prêt !\nConnecte-toi sur ${config.appUrl ?? 'http://localhost:5173'}\n\nÀ bientôt,\nL'équipe TriPlanner`,
+      html: `<!DOCTYPE html><html><head><meta charset="utf-8">
+<style>body{font-family:Arial,sans-serif;line-height:1.6;color:#333}.container{max-width:600px;margin:0 auto;padding:20px}.cta{display:inline-block;padding:12px 24px;background:linear-gradient(135deg,#FB923C,#EA580C);color:#fff;text-decoration:none;border-radius:12px;font-weight:600;margin:16px 0}.footer{margin-top:30px;padding-top:20px;border-top:1px solid #e5e7eb;color:#6b7280;font-size:14px}</style>
+</head><body><div class="container">
+<h2 style="color:#EA580C">Bienvenue sur TriPlanner 👋</h2>
+<p>Bonjour <strong>${user.firstName}</strong>,</p>
+<p>Ton compte TriPlanner est prêt. Tu peux maintenant planifier tes compétitions, suivre tes entraînements et laisser l'IA t'accompagner vers tes objectifs.</p>
+<a href="${config.appUrl ?? 'http://localhost:5173'}" class="cta">Accéder à mon espace →</a>
+<div class="footer"><p>L'équipe TriPlanner</p></div>
+</div></body></html>`,
+    })
+  } catch (e) {
+    console.error('[Welcome email] Erreur:', e)
+  }
 
   return user
 }

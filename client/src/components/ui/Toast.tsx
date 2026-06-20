@@ -102,6 +102,8 @@ interface ToastProps extends ToastItem {
 export function Toast({ type, title, description, onClose }: ToastProps) {
   return (
     <div
+      role="alert"
+      aria-live="polite"
       className={clsx(
         'pointer-events-auto rounded-xl border p-4 shadow-lg',
         'animate-slide-in-right',
