@@ -27,6 +27,8 @@ model User {
   personalRecords         PersonalRecord[]
   achievements            UserAchievement[]
   seasonGoals             SeasonGoal[]
+  clubMemberships         ClubMember[] @relation("ClubMemberUser")
+  groupMemberships        TrainingGroupMember[]
 }
 
 model StravaConnection {
@@ -92,6 +94,9 @@ model Competition {
 
   chronoObjective  String?
   result           String?
+  finishTime       String?
+  runPace          String?
+  rank             Int?
 
   registrationLink String?
   notes            String?
@@ -272,4 +277,82 @@ model SeasonGoal {
 
   @@index([userId])
   @@index([userId, year])
+}
+
+model Club {
+  id        Int             @id @default(autoincrement())
+  name      String
+  createdAt DateTime        @default(now())
+  members   ClubMember[]
+  groups    TrainingGroup[]
+}
+
+model ClubMember {
+  id        Int      @id @default(autoincrement())
+  clubId    Int
+  club      Club     @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  userId    Int
+  user      User     @relation("ClubMemberUser", fields: [userId], references: [id], onDelete: Cascade)
+  role      String   // 'coach' | 'athlete'
+  createdAt DateTime @default(now())
+  @@unique([clubId, userId])
+}
+
+model CoachPlanSuggestion {
+  id          Int       @id @default(autoincrement())
+  coachId     Int
+  athleteId   Int
+  planId      Int
+  weekNumber  Int
+  suggestions String    // JSON stringifié
+  coachNote   String?
+  status      String    @default("draft") // draft | sent | accepted | rejected
+  createdAt   DateTime  @default(now())
+  sentAt      DateTime?
+  respondedAt DateTime?
+}
+
+model MessageThread {
+  id           Int       @id @default(autoincrement())
+  participants String    // JSON array de userIds ex: "[1,2]"
+  groupName    String?
+  lastMessage  String?
+  lastAt       DateTime?
+  createdAt    DateTime  @default(now())
+  messages     Message[]
+}
+
+model Message {
+  id        Int           @id @default(autoincrement())
+  threadId  Int
+  thread    MessageThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  senderId  Int
+  content   String
+  readBy    String        @default("[]") // JSON array de userIds
+  createdAt DateTime      @default(now())
+}
+
+model TrainingGroup {
+  id              Int      @id @default(autoincrement())
+  clubId          Int
+  club            Club     @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  name            String
+  level           String   // Débutant | Intermédiaire | Avancé | Élite
+  description     String?
+  icon            String?  @default("users")
+  color           String?  @default("orange")
+  weeklyHours     Float    @default(5)
+  sessionsPerWeek Int      @default(4)
+  createdAt       DateTime @default(now())
+  members         TrainingGroupMember[]
+}
+
+model TrainingGroupMember {
+  id        Int           @id @default(autoincrement())
+  groupId   Int
+  group     TrainingGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  userId    Int
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  joinedAt  DateTime      @default(now())
+  @@unique([groupId, userId])
 }

@@ -21,12 +21,15 @@ import recordsRoutes from './modules/records/records.routes.js'
 import achievementsRoutes from './modules/achievements/achievements.routes.js'
 import notificationsRoutes from './modules/notifications/notifications.routes.js'
 import goalsRoutes from './modules/goals/goals.routes.js'
+import clubRoutes from './modules/club/club.routes.js'
+import messagesRoutes from './modules/messages/messages.routes.js'
+import groupsRoutes from './modules/groups/groups.routes.js'
 
 const app = express()
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 20,
+  max: 100,
   message: { error: 'Trop de tentatives. Réessayez dans 15 minutes.' },
   standardHeaders: true,
   legacyHeaders: false,
@@ -40,7 +43,21 @@ const passwordLimiter = rateLimit({
   legacyHeaders: false,
 })
 
-app.use(helmet())
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"], // Tailwind inline styles
+      scriptSrc: ["'self'"],
+      imgSrc: ["'self'", "data:", "https:"],
+      connectSrc: ["'self'"],
+      fontSrc: ["'self'", "https:", "data:"],
+      objectSrc: ["'none'"],
+      upgradeInsecureRequests: [],
+    },
+  },
+  crossOriginEmbedderPolicy: false, // Allow cross-origin resources (Strava images)
+}))
 app.use(cors({
   origin: 'http://localhost:5173',
   credentials: true,
@@ -67,6 +84,9 @@ app.use('/api/v1/records', recordsRoutes)
 app.use('/api/v1/achievements', achievementsRoutes)
 app.use('/api/v1/notifications', notificationsRoutes)
 app.use('/api/v1/goals', goalsRoutes)
+app.use('/api/v1/club', clubRoutes)
+app.use('/api/v1/messages', messagesRoutes)
+app.use('/api/v1/groups', groupsRoutes)
 
 // Health check
 app.get('/api/health', (_req, res) => {

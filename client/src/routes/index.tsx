@@ -3,7 +3,7 @@ import ProtectedRoute from '@/components/layout/ProtectedRoute'
 import AdminRoute from '@/components/layout/AdminRoute'
 import AppLayout from '@/components/layout/AppLayout'
 import ClubCoachLayout from '@/components/layout/ClubCoachLayout'
-import ClubAthleteLayout from '@/components/layout/ClubAthleteLayout'
+// ClubAthleteLayout removed (aperçu athlète integrated into coach space)
 import AdminLayout from '@/components/layout/AdminLayout'
 import LoginPage from '@/pages/LoginPage'
 import RegisterPage from '@/pages/RegisterPage'
@@ -31,8 +31,10 @@ import RaceDayPage from '@/pages/RaceDayPage'
 import SharedPlanPage from '@/pages/SharedPlanPage'
 import PublicPlansPage from '@/pages/PublicPlansPage'
 import ClubPage from '@/pages/ClubPage'
-import ClubCoachPage from '@/pages/ClubCoachPage'
-import ClubAthletePage from '@/pages/ClubAthletePage'
+import ClubCoachDashboardPage from '@/pages/ClubCoachDashboardPage'
+import ClubCoachGroupsPage from '@/pages/ClubCoachGroupsPage'
+import ClubCoachCalendarPage from '@/pages/ClubCoachCalendarPage'
+import ClubCoachPlanWizardPage from '@/pages/ClubCoachPlanWizardPage'
 import MessagesPage from '@/pages/MessagesPage'
 import ProfilePage from '@/pages/ProfilePage'
 import NotFoundPage from '@/pages/NotFoundPage'
@@ -74,13 +76,11 @@ export const router = createBrowserRouter([
       {
         element: <ClubCoachLayout />,
         children: [
-          { path: '/club/coach', element: <ClubCoachPage /> },
-        ],
-      },
-      {
-        element: <ClubAthleteLayout />,
-        children: [
-          { path: '/club/athlete', element: <ClubAthletePage /> },
+          { path: '/club/coach', element: <ClubCoachDashboardPage /> },
+          { path: '/club/coach/groupes', element: <ClubCoachGroupsPage /> },
+          { path: '/club/coach/calendrier', element: <ClubCoachCalendarPage /> },
+          { path: '/club/coach/plans', element: <ClubCoachPlanWizardPage /> },
+          { path: '/club/coach/plans/new', element: <ClubCoachPlanWizardPage /> },
         ],
       },
     ],

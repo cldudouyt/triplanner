@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { NavLink, useNavigate } from 'react-router-dom'
+import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard,
   ClipboardList,
@@ -16,6 +16,7 @@ import {
   Moon,
   Menu,
   User,
+  ArrowRightFromLine,
 } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '@/context/AuthContext'
@@ -419,17 +420,19 @@ export default function Sidebar() {
 
 // ─── Sidebar Coach ────────────────────────────────────────────────────────────
 
-const coachNavLinks = [
-  { to: '/', icon: LayoutDashboard, label: 'Tableau de bord', end: true },
-  { to: '/club/coach', icon: Users, label: 'Mon groupe', end: false },
-  { to: '/training', icon: ClipboardList, label: 'Plans & assignations', end: false },
-  { to: '/calendar', icon: Calendar, label: 'Calendrier', end: false },
-  { to: '/competitions', icon: Trophy, label: 'Compétitions', end: false },
-  { to: '/messages', icon: MessageSquare, label: 'Messages', end: false },
-]
-
 export function SidebarCoach() {
   const [isOpen, setIsOpen] = useState(false)
+  const navigate = useNavigate()
+  const location = useLocation()
+  const { user } = useAuth()
+
+  const coachLinks = [
+    { to: '/club/coach', icon: LayoutDashboard, label: 'Tableau de bord club', end: true },
+    { to: '/club/coach/groupes', icon: Users, label: 'Groupes', end: false },
+    { to: '/club/coach/plans', icon: ClipboardList, label: "Plans d'entraînement", end: false },
+    { to: '/club/coach/calendrier', icon: Calendar, label: 'Calendrier', end: false },
+    { to: '/messages', icon: MessageSquare, label: 'Messages', end: false },
+  ]
 
   const handleNavClick = () => {
     if (window.innerWidth < 1024) setIsOpen(false)
@@ -443,75 +446,70 @@ export function SidebarCoach() {
           onClick={() => setIsOpen(false)}
         />
       )}
-
       <button
         onClick={() => setIsOpen(true)}
-        className="fixed top-3 left-3 z-30 lg:hidden p-2 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors shadow-sm"
+        className="fixed top-3 left-3 z-30 lg:hidden p-2 rounded-xl bg-white border border-gray-200 hover:bg-gray-50 transition-colors shadow-sm"
         aria-label="Ouvrir le menu"
       >
-        <Menu className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+        <Menu className="w-5 h-5 text-gray-600" />
       </button>
 
       <aside
-        className={`
-          fixed lg:sticky top-0 left-0 z-50 h-screen w-[230px] flex-none
-          bg-white dark:bg-slate-900 border-r border-gray-100 dark:border-slate-800
-          flex flex-col
-          transform transition-transform duration-300 ease-in-out
-          ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
-        `}
+        className={`fixed lg:sticky top-0 left-0 z-50 h-screen w-[230px] flex-none bg-white border-r border-gray-100 flex flex-col transform transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}
       >
-        {/* Logo */}
         <div className="px-4 pt-4 pb-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center text-white font-bold text-sm shadow-md shadow-orange-600/30 flex-none">
-                M
-              </div>
-              <div className="min-w-0">
-                <p className="text-sm font-bold text-gray-900 dark:text-gray-100 leading-tight">Tri Planner</p>
-                <p className="text-xs text-gray-400 leading-tight truncate">Triathlon Club Nantais</p>
-              </div>
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center text-white font-bold text-sm shadow-md shadow-orange-600/30 flex-none">
+              M
             </div>
-            <button
-              onClick={() => setIsOpen(false)}
-              aria-label="Fermer le menu"
-              className="lg:hidden p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors"
-            >
-              <X className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+            <div className="min-w-0">
+              <p className="text-sm font-bold text-gray-900 leading-tight">Tri Planner</p>
+              <p className="text-xs text-gray-400 leading-tight truncate">Espace coach · TCN</p>
+            </div>
+            <button onClick={() => setIsOpen(false)} aria-label="Fermer" className="lg:hidden p-1.5 rounded-lg hover:bg-gray-100 transition-colors ml-auto">
+              <X className="w-4 h-4 text-gray-500" />
             </button>
           </div>
         </div>
 
-        {/* Mode Coach badge */}
-        <div className="px-3 pb-3">
-          <div className="flex items-center gap-2 bg-orange-50 dark:bg-orange-900/20 rounded-xl px-3 py-2">
-            <span className="w-2 h-2 rounded-full bg-orange-500 animate-dot flex-none" />
-            <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">Mode Coach</span>
+        <nav className="flex-1 px-2 py-1 space-y-0.5 overflow-y-auto">
+          {coachLinks.map(({ to, icon: Icon, label, end }) => {
+            const isActive = end ? location.pathname === to : location.pathname.startsWith(to)
+            return (
+              <NavLink
+                key={to}
+                to={to}
+                end={end}
+                onClick={handleNavClick}
+                className={`flex items-center gap-3 px-3 py-2 rounded-xl text-sm transition-all ${isActive ? 'bg-orange-50' : 'hover:bg-gray-50'}`}
+              >
+                <span className={`w-[30px] h-[30px] flex-none rounded-[9px] flex items-center justify-center transition-all ${isActive ? 'bg-gradient-to-br from-orange-400 to-orange-600 text-white shadow-md shadow-orange-600/30' : 'bg-gray-100 text-gray-400'}`}>
+                  <Icon className="h-4 w-4" />
+                </span>
+                <span className={`flex-1 ${isActive ? 'font-medium text-gray-900' : 'text-gray-500'}`}>{label}</span>
+              </NavLink>
+            )
+          })}
+        </nav>
+
+        <div className="px-3 pb-4 pt-2 border-t border-gray-100">
+          <div className="flex items-center gap-3 px-2 py-2 rounded-xl hover:bg-gray-50 transition-colors">
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center text-white text-xs font-bold flex-none">
+              TM
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-gray-900 truncate">{user?.firstName} {user?.lastName}</p>
+              <p className="text-xs text-gray-400">Coach · TCN</p>
+            </div>
+            <button
+              onClick={() => navigate('/')}
+              className="p-1.5 rounded-lg bg-gray-100 text-gray-400 hover:bg-gray-200 transition-colors flex-none"
+              title="Retour à l'espace athlète"
+            >
+              <ArrowRightFromLine className="w-4 h-4" />
+            </button>
           </div>
         </div>
-
-        {/* Navigation (icônes small, pas de pill) */}
-        <nav className="flex-1 px-2 py-1 space-y-0.5 overflow-y-auto">
-          {coachNavLinks.map(({ to, icon: Icon, label, end }) => (
-            <NavLink
-              key={to}
-              to={to}
-              end={end}
-              onClick={handleNavClick}
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-2 rounded-xl text-sm transition-all ${
-                  isActive
-                    ? 'bg-orange-50 dark:bg-orange-900/20 font-medium text-gray-900 dark:text-gray-100'
-                    : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-800 hover:text-gray-700 dark:hover:text-gray-300'
-                }`
-              }
-            >
-              <Icon className="w-4 h-4 flex-none" />
-              <span className="flex-1">{label}</span>
-            </NavLink>
-          ))}
-        </nav>
       </aside>
     </>
   )

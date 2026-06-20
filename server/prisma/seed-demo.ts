@@ -8,426 +8,366 @@ const adapter = new PrismaBetterSqlite3({ url: process.env.DATABASE_URL! })
 const prisma = new PrismaClient({ adapter })
 
 async function main() {
-  console.log('--- Creation du compte demo ---')
+  console.log('--- Création du compte démo ---')
+
+  const now = new Date()
 
   // =====================================================
-  // 1. Compte de demo
+  // Semaine courante (pour calcul weekNumber ISO)
+  // =====================================================
+  const startOfYear = new Date(now.getFullYear(), 0, 1)
+  const currentWeek = Math.ceil(
+    ((now.getTime() - startOfYear.getTime()) / 86400000 + startOfYear.getDay() + 1) / 7,
+  )
+
+  // =====================================================
+  // 1. Utilisateurs
   // =====================================================
   const password = await hashPassword('demo1234')
-  const user = await prisma.user.upsert({
+  const coachPassword = await hashPassword('coach1234')
+  const athletePassword = await hashPassword('athlete1234')
+
+  // Utilisateur démo principal : Léa Fontaine
+  const lea = await prisma.user.upsert({
     where: { email: 'demo@triathlon-planner.fr' },
-    update: {},
+    update: { firstName: 'Léa', lastName: 'Fontaine' },
     create: {
       email: 'demo@triathlon-planner.fr',
       password,
-      firstName: 'Marie',
-      lastName: 'Dupont',
+      firstName: 'Léa',
+      lastName: 'Fontaine',
       isAdmin: false,
     },
   })
-  console.log(`Utilisateur demo cree: ${user.email} / demo1234 (id=${user.id})`)
+  console.log(`Utilisateur démo créé : ${lea.email} / demo1234 (id=${lea.id})`)
 
-  // =====================================================
-  // 2. Preferences de notification
-  // =====================================================
-  await prisma.notificationPreferences.upsert({
-    where: { userId: user.id },
+  // Coach : Thomas Mercier
+  const thomas = await prisma.user.upsert({
+    where: { email: 'thomas.mercier@triathlon-nantes.fr' },
     update: {},
     create: {
-      userId: user.id,
+      email: 'thomas.mercier@triathlon-nantes.fr',
+      password: coachPassword,
+      firstName: 'Thomas',
+      lastName: 'Mercier',
+      isAdmin: false,
+    },
+  })
+
+  // Athlètes du club
+  const marc = await prisma.user.upsert({
+    where: { email: 'marc.petit@triathlon-nantes.fr' },
+    update: {},
+    create: {
+      email: 'marc.petit@triathlon-nantes.fr',
+      password: athletePassword,
+      firstName: 'Marc',
+      lastName: 'Petit',
+      isAdmin: false,
+    },
+  })
+
+  const sofia = await prisma.user.upsert({
+    where: { email: 'sofia.adler@triathlon-nantes.fr' },
+    update: {},
+    create: {
+      email: 'sofia.adler@triathlon-nantes.fr',
+      password: athletePassword,
+      firstName: 'Sofia',
+      lastName: 'Adler',
+      isAdmin: false,
+    },
+  })
+
+  const julie = await prisma.user.upsert({
+    where: { email: 'julie.bernard@triathlon-nantes.fr' },
+    update: {},
+    create: {
+      email: 'julie.bernard@triathlon-nantes.fr',
+      password: athletePassword,
+      firstName: 'Julie',
+      lastName: 'B.',
+      isAdmin: false,
+    },
+  })
+
+  console.log('5 utilisateurs créés (Léa, Thomas, Marc, Sofia, Julie)')
+
+  // =====================================================
+  // 2. Préférences de notification
+  // =====================================================
+  await prisma.notificationPreferences.upsert({
+    where: { userId: lea.id },
+    update: {},
+    create: {
+      userId: lea.id,
       emailSessionReminder: true,
       emailCompetitionReminder: true,
       reminderDaysBefore: 2,
     },
   })
-  console.log('Preferences de notification creees')
 
   // =====================================================
-  // 3. Competitions variees (passees, futures, differents types)
+  // 3. Club : Triathlon Club Nantais
   // =====================================================
+  await prisma.clubMember.deleteMany({ where: { userId: { in: [lea.id, thomas.id, marc.id, sofia.id, julie.id] } } })
 
-  // Supprimer les anciennes competitions du user demo pour eviter les doublons
-  await prisma.competition.deleteMany({ where: { userId: user.id } })
+  const existingClub = await prisma.club.findFirst({ where: { name: 'Triathlon Club Nantais' } })
+  const club = existingClub ?? await prisma.club.create({ data: { name: 'Triathlon Club Nantais' } })
 
-  const now = new Date()
+  await prisma.clubMember.createMany({
+    data: [
+      { clubId: club.id, userId: thomas.id, role: 'coach' },
+      { clubId: club.id, userId: lea.id, role: 'athlete' },
+      { clubId: club.id, userId: marc.id, role: 'athlete' },
+      { clubId: club.id, userId: sofia.id, role: 'athlete' },
+      { clubId: club.id, userId: julie.id, role: 'prépa' },
+    ],
+  })
+  console.log('Club "Triathlon Club Nantais" créé avec 5 membres')
+
+  // =====================================================
+  // 3b. Athlètes supplémentaires pour les groupes
+  // =====================================================
+  const extraAthletes = [
+    { email: 'helene.dubois@triathlon-nantes.fr', firstName: 'Hélène', lastName: 'Dubois' },
+    { email: 'yanis.baki@triathlon-nantes.fr', firstName: 'Yanis', lastName: 'Baki' },
+    { email: 'emma.legoff@triathlon-nantes.fr', firstName: 'Emma', lastName: 'Le Goff' },
+    { email: 'noe.renaud@triathlon-nantes.fr', firstName: 'Noé', lastName: 'Renaud' },
+    { email: 'theo.pichon@triathlon-nantes.fr', firstName: 'Théo', lastName: 'Pichon' },
+    { email: 'clara.roux@triathlon-nantes.fr', firstName: 'Clara', lastName: 'Roux' },
+    { email: 'marc.berthier@triathlon-nantes.fr', firstName: 'Marc', lastName: 'Berthier' },
+    { email: 'julie.lemaire@triathlon-nantes.fr', firstName: 'Julie', lastName: 'Lemaire' },
+    { email: 'adrien.daniel@triathlon-nantes.fr', firstName: 'Adrien', lastName: 'Daniel' },
+  ]
+
+  const extraUsers = await Promise.all(
+    extraAthletes.map(u =>
+      prisma.user.upsert({
+        where: { email: u.email },
+        update: {},
+        create: { email: u.email, password: athletePassword, firstName: u.firstName, lastName: u.lastName, isAdmin: false },
+      }),
+    ),
+  )
+
+  const [helene, yanis, emma, noe, theo, clara, marcB, julieLemaire, adrien] = extraUsers
+
+  await prisma.clubMember.deleteMany({ where: { userId: { in: extraUsers.map(u => u.id) } } })
+  await prisma.clubMember.createMany({
+    data: extraUsers.map(u => ({ clubId: club.id, userId: u.id, role: 'athlete' })),
+  })
+
+  // =====================================================
+  // 3c. Groupes d'entraînement
+  // =====================================================
+  await prisma.trainingGroupMember.deleteMany({ where: { group: { clubId: club.id } } })
+  await prisma.trainingGroup.deleteMany({ where: { clubId: club.id } })
+
+  const groupDecouverte = await prisma.trainingGroup.create({
+    data: { clubId: club.id, name: 'Découverte', level: 'Débutant', description: 'Premiers pas en triathlon : technique, régularité et plaisir avant la performance.', icon: 'leaf', color: 'cyan', weeklyHours: 5, sessionsPerWeek: 4 },
+  })
+  const groupEndurance = await prisma.trainingGroup.create({
+    data: { clubId: club.id, name: 'Endurance Loisir', level: 'Intermédiaire', description: 'Forme et sorties longues, sans pression de chrono. Une à deux courses plaisir par an.', icon: 'bike', color: 'emerald', weeklyHours: 7, sessionsPerWeek: 5 },
+  })
+  const groupCompetition = await prisma.trainingGroup.create({
+    data: { clubId: club.id, name: 'Compétition', level: 'Avancé', description: "Objectifs de saison : Triathlon de Nantes, La Baule. Charge structurée et périodisée.", icon: 'trophy', color: 'orange', weeklyHours: 8.5, sessionsPerWeek: 6 },
+  })
+  const groupLongue = await prisma.trainingGroup.create({
+    data: { clubId: club.id, name: 'Longue Distance', level: 'Élite', description: 'Préparation Half & Ironman. Gros volumes, double séance et suivi rapproché.', icon: 'mountain', color: 'slate', weeklyHours: 12, sessionsPerWeek: 7 },
+  })
+
+  await prisma.trainingGroupMember.createMany({
+    data: [
+      { groupId: groupDecouverte.id, userId: yanis.id },
+      { groupId: groupDecouverte.id, userId: emma.id },
+      { groupId: groupDecouverte.id, userId: noe.id },
+      { groupId: groupDecouverte.id, userId: theo.id },
+      { groupId: groupEndurance.id, userId: clara.id },
+      { groupId: groupEndurance.id, userId: marcB.id },
+      { groupId: groupEndurance.id, userId: julieLemaire.id },
+      { groupId: groupEndurance.id, userId: adrien.id },
+      { groupId: groupCompetition.id, userId: lea.id },
+      { groupId: groupCompetition.id, userId: marc.id },
+      { groupId: groupCompetition.id, userId: sofia.id },
+      { groupId: groupLongue.id, userId: helene.id },
+    ],
+  })
+  console.log('4 groupes d\'entraînement créés avec athlètes assignés')
+
+  // =====================================================
+  // 4. Compétitions de Léa
+  // =====================================================
+  await prisma.competition.deleteMany({ where: { userId: lea.id } })
+
   const competitions = await Promise.all([
-    // -- Competitions PASSEES --
+    // -- PASSÉES --
     prisma.competition.create({
       data: {
-        userId: user.id,
-        name: 'Triathlon de Deauville',
-        date: new Date(now.getFullYear(), now.getMonth() - 5, 15),
-        location: 'Deauville',
+        userId: lea.id,
+        name: 'Triathlon de Pornic',
+        date: new Date(2026, 4, 11), // 11 mai 2026
+        location: 'Pornic',
         type: 'triathlon',
         subType: 'sprint',
         swimDistance: 750,
         bikeDistance: 20000,
         runDistance: 5000,
-        chronoObjective: '1h25',
-        result: '1h22:34',
-        priority: 'B',
         status: 'completed',
-        startTime: '08:30',
-        notes: 'Premiere course de la saison. Bonnes sensations en natation, un peu court en course.',
-        budget: 85,
-        accommodation: 'Airbnb avec le club',
-        transport: 'Covoiturage',
+        priority: 'B',
+        finishTime: '1h12:40',
+        runPace: '4:18 /km',
+        rank: 8,
+        notes: 'Belle course, bonne transition.',
       },
     }),
     prisma.competition.create({
       data: {
-        userId: user.id,
+        userId: lea.id,
         name: 'Semi de Paris',
         date: new Date(now.getFullYear(), now.getMonth() - 3, 8),
         location: 'Paris',
         type: 'running',
         subType: 'semi-marathon',
         runDistance: 21100,
-        chronoObjective: '1h50',
-        result: '1h47:12',
-        priority: 'A',
         status: 'completed',
-        notes: 'Objectif principal du semestre. Record personnel battu de 3 minutes !',
-        budget: 65,
-        transport: 'Metro',
-      },
-    }),
-    prisma.competition.create({
-      data: {
-        userId: user.id,
-        name: '10K de Vincennes',
-        date: new Date(now.getFullYear(), now.getMonth() - 1, 20),
-        location: 'Vincennes',
-        type: 'running',
-        subType: '10k',
-        runDistance: 10000,
-        chronoObjective: '48:00',
-        result: '46:55',
-        priority: 'C',
-        status: 'completed',
-        notes: 'Course de reprise sympa dans le bois.',
-        budget: 25,
+        priority: 'B',
+        finishTime: '1h47:12',
+        runPace: '5:05 /km',
+        rank: 142,
+        notes: 'Bonne forme, objectif atteint.',
       },
     }),
 
-    // -- Competitions FUTURES --
+    // -- FUTURES — objectif C : Tri Sprint de Vertou (J-~12) --
     prisma.competition.create({
       data: {
-        userId: user.id,
-        name: 'Triathlon de La Baule',
-        date: new Date(now.getFullYear(), now.getMonth() + 2, 22),
-        location: 'La Baule',
-        type: 'triathlon',
-        subType: 'olympic',
-        swimDistance: 1500,
-        bikeDistance: 40000,
-        runDistance: 10000,
-        chronoObjective: '2h45',
-        priority: 'A',
-        status: 'registered',
-        startTime: '08:30',
-        notes: 'Objectif principal de la saison. Eau libre, parcours velo plat.',
-        budget: 120,
-        accommodation: 'Hotel Le Concorde',
-        transport: 'Train + velo',
-      },
-    }),
-    prisma.competition.create({
-      data: {
-        userId: user.id,
-        name: 'Marathon de Bordeaux',
-        date: new Date(now.getFullYear(), now.getMonth() + 4, 12),
-        location: 'Bordeaux',
-        type: 'running',
-        subType: 'marathon',
-        runDistance: 42195,
-        chronoObjective: '3h45',
-        priority: 'A',
-        status: 'registered',
-        notes: 'Premier marathon ! Parcours repute rapide et plat.',
-        budget: 150,
-        accommodation: 'A reserver',
-        transport: 'TGV',
-      },
-    }),
-    prisma.competition.create({
-      data: {
-        userId: user.id,
-        name: 'Triathlon Sprint du Lac',
-        date: new Date(now.getFullYear(), now.getMonth() + 1, 5),
-        location: 'Annecy',
+        userId: lea.id,
+        name: 'Tri Sprint de Vertou',
+        date: new Date(2026, 6, 2), // 2 juillet 2026
+        location: 'Vertou',
         type: 'triathlon',
         subType: 'sprint',
         swimDistance: 750,
         bikeDistance: 20000,
         runDistance: 5000,
-        chronoObjective: '1h20',
-        priority: 'B',
-        status: 'registered',
-        notes: 'Preparation pour La Baule. Beau parcours au bord du lac.',
-        budget: 75,
-        accommodation: 'Camping',
-        transport: 'Voiture',
-      },
-    }),
-    prisma.competition.create({
-      data: {
-        userId: user.id,
-        name: 'Trail de la Sainte-Victoire',
-        date: new Date(now.getFullYear(), now.getMonth() + 5, 28),
-        location: 'Aix-en-Provence',
-        type: 'running',
-        subType: 'trail',
-        runDistance: 25000,
-        chronoObjective: '3h00',
+        chronoObjective: '1h15',
         priority: 'C',
-        status: 'planned',
-        notes: 'Pour le plaisir, beau parcours en montagne.',
-        budget: 45,
+        status: 'dns',
+        startTime: '09:00',
+        notes: 'Course de préparation avant La Baule.',
+        budget: 55,
       },
     }),
+
+    // -- FUTURES — objectif B : Audencia La Baule (J-~84) --
     prisma.competition.create({
       data: {
-        userId: user.id,
-        name: 'Half Ironman Nice',
-        date: new Date(now.getFullYear(), now.getMonth() + 7, 10),
-        location: 'Nice',
+        userId: lea.id,
+        name: 'Audencia La Baule',
+        date: new Date(2026, 8, 12), // 12 septembre 2026
+        location: 'La Baule',
         type: 'triathlon',
         subType: 'half-ironman',
         swimDistance: 1900,
         bikeDistance: 90000,
         runDistance: 21100,
-        chronoObjective: '5h30',
-        priority: 'A',
+        chronoObjective: '5h20',
+        priority: 'B',
         status: 'planned',
-        notes: 'Gros objectif long terme. Debut de la prepa dans 3 mois.',
-        budget: 350,
-        accommodation: 'A reserver',
-        transport: 'Avion ou train',
+        startTime: '07:30',
+        notes: 'Semi-distance, objectif intermédiaire.',
+        budget: 180,
+        accommodation: 'Hôtel à La Baule',
+        transport: 'Train + vélo',
       },
     }),
-    // -- Competition "aujourd'hui" pour tester la banniere RaceDay --
+
+    // -- FUTURES — objectif A : Triathlon de Nantes (19 oct) --
     prisma.competition.create({
       data: {
-        userId: user.id,
-        name: 'Triathlon de Test — Race Day',
-        date: new Date(),
-        location: 'Quiberon, Bretagne',
+        userId: lea.id,
+        name: 'Triathlon de Nantes',
+        date: new Date(2026, 9, 19), // 19 octobre 2026
+        location: 'Nantes',
         type: 'triathlon',
-        subType: 'sprint',
-        status: 'planned',
+        subType: 'olympic',
+        swimDistance: 1500,
+        bikeDistance: 40000,
+        runDistance: 10000,
+        chronoObjective: '2h30',
         priority: 'A',
-        startTime: '09:00',
-        chronoObjective: '1h15',
-        swimDistance: 750,
-        bikeDistance: 20000,
-        runDistance: 5000,
+        status: 'registered',
+        startTime: '08:30',
+        notes: 'Objectif principal de la saison. Eau de Loire, parcours vélo plat.',
+        budget: 120,
+        accommodation: 'Chez famille',
+        transport: 'Voiture',
       },
     }),
   ])
 
-  console.log(`${competitions.length} competitions creees`)
+  console.log(`${competitions.length} compétitions de Léa créées`)
 
-  // Ajouter du materiel a certaines competitions
-  const triathlonComp = competitions.find(c => c.name === 'Triathlon de La Baule')!
-  const marathonComp = competitions.find(c => c.name === 'Marathon de Bordeaux')!
+  const nantesComp = competitions.find(c => c.name === 'Triathlon de Nantes')!
+  const vertouComp = competitions.find(c => c.name === 'Tri Sprint de Vertou')!
 
+  // Équipements pour la compét principale
   await prisma.equipmentItem.createMany({
     data: [
-      { competitionId: triathlonComp.id, name: 'Combinaison neoprene', checked: true, category: 'Natation' },
-      { competitionId: triathlonComp.id, name: 'Lunettes de natation', checked: true, category: 'Natation' },
-      { competitionId: triathlonComp.id, name: 'Bonnet de bain (fourni)', checked: false, category: 'Natation' },
-      { competitionId: triathlonComp.id, name: 'Velo + casque', checked: true, category: 'Velo' },
-      { competitionId: triathlonComp.id, name: 'Chaussures velo', checked: true, category: 'Velo' },
-      { competitionId: triathlonComp.id, name: 'Bidons + nutrition velo', checked: false, category: 'Velo' },
-      { competitionId: triathlonComp.id, name: 'Chaussures course', checked: true, category: 'Course' },
-      { competitionId: triathlonComp.id, name: 'Dossard + epingles', checked: false, category: 'General' },
-      { competitionId: triathlonComp.id, name: 'Creme solaire', checked: false, category: 'General' },
-      { competitionId: triathlonComp.id, name: 'Serviette transition', checked: false, category: 'Transition' },
-      { competitionId: marathonComp.id, name: 'Chaussures marathon (Vaporfly)', checked: true, category: 'Course' },
-      { competitionId: marathonComp.id, name: 'Gels (x6)', checked: false, category: 'Nutrition' },
-      { competitionId: marathonComp.id, name: 'Ceinture porte-dossard', checked: true, category: 'General' },
-      { competitionId: marathonComp.id, name: 'Montre GPS chargee', checked: false, category: 'General' },
-      { competitionId: marathonComp.id, name: 'Vaseline anti-frottements', checked: false, category: 'General' },
+      { competitionId: nantesComp.id, name: 'Combinaison néoprène', checked: true, category: 'Natation' },
+      { competitionId: nantesComp.id, name: 'Lunettes de natation', checked: true, category: 'Natation' },
+      { competitionId: nantesComp.id, name: 'Bonnet de bain', checked: false, category: 'Natation' },
+      { competitionId: nantesComp.id, name: 'Vélo + casque', checked: true, category: 'Vélo' },
+      { competitionId: nantesComp.id, name: 'Chaussures vélo', checked: true, category: 'Vélo' },
+      { competitionId: nantesComp.id, name: 'Bidons + nutrition vélo', checked: false, category: 'Vélo' },
+      { competitionId: nantesComp.id, name: 'Chaussures course', checked: true, category: 'Course' },
+      { competitionId: nantesComp.id, name: 'Dossard + épingles', checked: false, category: 'Général' },
+      { competitionId: nantesComp.id, name: 'Serviette transition', checked: false, category: 'Transition' },
     ],
   })
-  console.log('Equipements ajoutes aux competitions')
 
   // =====================================================
-  // 4. WellnessLog : 7 jours avant chaque competition terminee
+  // 5. Wellness de Léa (42 jours pour CTL ~82, ATL ~87, TSB ~-5)
   // =====================================================
+  await prisma.wellnessLog.deleteMany({ where: { userId: lea.id } })
 
-  // Supprimer les anciens wellness logs du user demo
-  await prisma.wellnessLog.deleteMany({ where: { userId: user.id } })
-
-  // Competitions terminees avec leurs dates
-  const deauvilleComp = competitions.find(c => c.name === 'Triathlon de Deauville')!
-  const semiComp = competitions.find(c => c.name === 'Semi de Paris')!
-  const vincennesComp = competitions.find(c => c.name === '10K de Vincennes')!
-
-  type WellnessEntry = {
-    userId: number
-    date: Date
-    fatigue: number
-    mood: number
-    sleepQuality: number
-    sleepHours: number
-    muscleSoreness: number
-    stress: number
-    restingHR: number
-    readinessScore: number
-    notes?: string
-  }
-
-  // Genere 7 jours de wellness avant une date de course
-  function buildPreRaceWellness(
-    userId: number,
-    raceDate: Date,
-    raceLabel: string
-  ): WellnessEntry[] {
-    const entries: WellnessEntry[] = []
-    for (let i = 7; i >= 1; i--) {
-      const d = new Date(raceDate)
-      d.setDate(d.getDate() - i)
-      d.setHours(0, 0, 0, 0)
-
-      // Fatigue diminue en approche de la course (affutage)
-      const fatigue = i >= 6 ? 3 : i >= 4 ? 2 : 1
-      const mood = i >= 6 ? 3 : i >= 3 ? 4 : 5
-      const sleepQuality = i === 1 ? 3 : 4 // nuit d'avant souvent moins bonne
-      const muscleSoreness = i >= 5 ? 2 : 1
-      const stress = i === 1 ? 3 : i <= 3 ? 2 : 2
-      const restingHR = 48 + Math.round(Math.random() * 4) + (i === 1 ? 3 : 0)
-      const readinessScore = i >= 6 ? 65 : i >= 4 ? 75 : i === 1 ? 80 : 88
-
-      let notes: string | undefined
-      if (i === 7) notes = `Debut de la semaine de course — ${raceLabel}`
-      if (i === 3) notes = 'Derniere seance courte, affutage bien engage'
-      if (i === 1) notes = 'Veille de course, un peu de stress mais forme au top'
-
-      entries.push({
-        userId,
-        date: d,
-        fatigue,
-        mood,
-        sleepQuality,
-        sleepHours: 7 + (sleepQuality >= 4 ? 1 : 0),
-        muscleSoreness,
-        stress,
-        restingHR,
-        readinessScore,
-        notes,
-      })
-    }
-    return entries
-  }
-
-  // Wellness aussi pour les 14 derniers jours (donnees recentes)
-  function buildRecentWellness(userId: number): WellnessEntry[] {
-    const entries: WellnessEntry[] = []
-    for (let i = 14; i >= 1; i--) {
-      const d = new Date(now)
-      d.setDate(d.getDate() - i)
-      d.setHours(0, 0, 0, 0)
-
-      const fatigue = 2 + Math.round(Math.random() * 2)
-      const mood = 3 + Math.round(Math.random() * 2)
-      const sleepQuality = 3 + Math.round(Math.random())
-      const muscleSoreness = 1 + Math.round(Math.random() * 2)
-      const stress = 2 + Math.round(Math.random())
-      const readinessScore = 60 + Math.round(Math.random() * 30)
-
-      entries.push({
-        userId,
-        date: d,
-        fatigue,
-        mood,
-        sleepQuality,
-        sleepHours: 6.5 + Math.round(Math.random() * 2),
-        muscleSoreness,
-        stress,
-        restingHR: 48 + Math.round(Math.random() * 6),
-        readinessScore,
-      })
-    }
-    return entries
-  }
-
-  const wellnessEntries: WellnessEntry[] = [
-    ...buildPreRaceWellness(user.id, deauvilleComp.date, 'Triathlon de Deauville'),
-    ...buildPreRaceWellness(user.id, semiComp.date, 'Semi de Paris'),
-    ...buildPreRaceWellness(user.id, vincennesComp.date, '10K de Vincennes'),
-    ...buildRecentWellness(user.id),
-  ]
-
-  // Deduplique par date (au cas ou des plages se chevauchent)
-  const seenDates = new Set<string>()
-  const uniqueWellness = wellnessEntries.filter(e => {
-    const key = e.date.toISOString().split('T')[0]
-    if (seenDates.has(key)) return false
-    seenDates.add(key)
-    return true
-  })
-
-  await prisma.wellnessLog.createMany({ data: uniqueWellness })
-  console.log(`${uniqueWellness.length} wellness logs crees (pre-course + recents)`)
-
-  // =====================================================
-  // 5. Plans d'entrainement (3 niveaux differents)
-  // =====================================================
-
-  // Supprimer les anciens plans du user demo
-  await prisma.trainingPlan.deleteMany({ where: { userId: user.id } })
-
-  // --- Plan 1 : Debutant 5K (termine, avec progression) ---
-  const startDate5K = new Date(now.getFullYear(), now.getMonth() - 4, 1)
-  const plan5K = await prisma.trainingPlan.create({
-    data: {
-      userId: user.id,
-      name: 'Mon premier 5K',
-      description: 'Programme debutant pour courir 5K sans s\'arreter',
-      targetType: '5k',
-      durationWeeks: 6,
-      level: 'beginner',
-      weeklyHours: 3,
-      startDate: startDate5K,
-      endDate: new Date(startDate5K.getTime() + 6 * 7 * 24 * 60 * 60 * 1000),
-    },
-  })
-  await generateSessionsForPlan(plan5K.id, '5k', 6, startDate5K, 'beginner')
-
-  // Lier la competition Deauville au plan 5K (course de la meme periode)
-  await prisma.planCompetition.create({
-    data: {
-      planId: plan5K.id,
-      competitionId: deauvilleComp.id,
-      isPrimary: false,
-      order: 0,
-    },
-  })
-
-  // Marquer la majorite des seances comme terminees (plan passe)
-  const sessions5K = await prisma.trainingSession.findMany({ where: { planId: plan5K.id } })
-  for (const s of sessions5K) {
-    await prisma.trainingSession.update({
-      where: { id: s.id },
-      data: {
-        completed: true,
-        actualDuration: s.duration ? Math.round(s.duration * (0.9 + Math.random() * 0.2)) : null,
-        actualDistance: s.distance ? Math.round(s.distance * (0.95 + Math.random() * 0.1)) : null,
-        notes: Math.random() > 0.7 ? 'Bonnes sensations' : undefined,
-      },
+  const leaWellness = []
+  for (let i = 42; i >= 1; i--) {
+    const d = new Date(now)
+    d.setDate(d.getDate() - i)
+    d.setHours(0, 0, 0, 0)
+    const readiness = i <= 7 ? 87 + Math.round(Math.random() * 4 - 2) : 81 + Math.round(Math.random() * 4 - 2)
+    leaWellness.push({
+      userId: lea.id,
+      date: d,
+      fatigue: i <= 7 ? 3 : 2,
+      mood: i <= 7 ? 4 : 3,
+      sleepQuality: 4,
+      sleepHours: 7.5,
+      muscleSoreness: i <= 7 ? 3 : 2,
+      stress: 2,
+      restingHR: 48 + Math.round(Math.random() * 4),
+      readinessScore: readiness,
     })
   }
-  console.log(`Plan "${plan5K.name}" cree avec ${sessions5K.length} seances (toutes terminees)`)
+  await prisma.wellnessLog.createMany({ data: leaWellness })
+  console.log(`${leaWellness.length} wellness logs créés pour Léa (CTL~82, TSB~-5)`)
 
-  // --- Plan 2 : Intermediaire Triathlon Olympique (en cours) ---
-  const startDateTri = new Date(now.getFullYear(), now.getMonth() - 1, getMonday(now).getDate())
+  // =====================================================
+  // 6. Plans d'entraînement de Léa
+  // =====================================================
+  await prisma.trainingPlan.deleteMany({ where: { userId: lea.id } })
+
+  // Plan actif : semaine 6/12 (startDate = lundi il y a 5 semaines)
+  const mondayNow = getMonday(now)
+  const startDateTri = new Date(mondayNow.getTime() - 5 * 7 * 24 * 60 * 60 * 1000)
+
   const planTri = await prisma.trainingPlan.create({
     data: {
-      userId: user.id,
-      name: 'Prepa Triathlon La Baule',
-      description: 'Preparation pour le triathlon olympique de La Baule. Objectif : 2h45.',
+      userId: lea.id,
+      name: 'Prepa Triathlon de Nantes',
+      description: 'Préparation pour le triathlon olympique de Nantes. Objectif : 2h30.',
       targetType: 'olympic',
       durationWeeks: 12,
       level: 'intermediate',
@@ -437,34 +377,22 @@ async function main() {
     },
   })
 
-  // Lier la competition cible
   await prisma.planCompetition.create({
-    data: {
-      planId: planTri.id,
-      competitionId: triathlonComp.id,
-      isPrimary: true,
-      order: 0,
-    },
+    data: { planId: planTri.id, competitionId: nantesComp.id, isPrimary: true, order: 0 },
   })
-  const sprintComp = competitions.find(c => c.name === 'Triathlon Sprint du Lac')!
   await prisma.planCompetition.create({
-    data: {
-      planId: planTri.id,
-      competitionId: sprintComp.id,
-      isPrimary: false,
-      order: 1,
-    },
+    data: { planId: planTri.id, competitionId: vertouComp.id, isPrimary: false, order: 1 },
   })
 
   await generateSessionsForPlan(planTri.id, 'olympic', 12, startDateTri, 'intermediate')
 
-  // Marquer les 4 premieres semaines comme terminees (en cours de la 5eme)
+  // Semaines 1-5 terminées
   const sessionsTri = await prisma.trainingSession.findMany({
     where: { planId: planTri.id },
     orderBy: [{ weekNumber: 'asc' }, { dayOfWeek: 'asc' }],
   })
   for (const s of sessionsTri) {
-    if (s.weekNumber <= 4) {
+    if (s.weekNumber <= 5) {
       await prisma.trainingSession.update({
         where: { id: s.id },
         data: {
@@ -476,48 +404,17 @@ async function main() {
       })
     }
   }
-  console.log(`Plan "${planTri.name}" cree avec ${sessionsTri.length} seances (semaines 1-4 terminees)`)
+  console.log(`Plan "${planTri.name}" créé — semaine 6/12 en cours`)
 
-  // --- Plan 3 : Avance Marathon (futur, pas encore commence) ---
-  const startDateMarathon = new Date(now.getFullYear(), now.getMonth() + 1, 1)
-  // Mettre au lundi
-  startDateMarathon.setDate(startDateMarathon.getDate() - ((startDateMarathon.getDay() + 6) % 7))
-
-  const planMarathon = await prisma.trainingPlan.create({
-    data: {
-      userId: user.id,
-      name: 'Prepa Marathon Bordeaux',
-      description: 'Plan avance marathon 16 semaines. Objectif sub 3h45.',
-      targetType: 'marathon',
-      durationWeeks: 16,
-      level: 'advanced',
-      weeklyHours: 10,
-      startDate: startDateMarathon,
-      endDate: new Date(startDateMarathon.getTime() + 16 * 7 * 24 * 60 * 60 * 1000),
-    },
-  })
-  await prisma.planCompetition.create({
-    data: {
-      planId: planMarathon.id,
-      competitionId: marathonComp.id,
-      isPrimary: true,
-      order: 0,
-    },
-  })
-  await generateSessionsForPlan(planMarathon.id, 'marathon', 16, startDateMarathon, 'advanced')
-
-  const sessionsMarathon = await prisma.trainingSession.count({ where: { planId: planMarathon.id } })
-  console.log(`Plan "${planMarathon.name}" cree avec ${sessionsMarathon} seances (pas encore commence)`)
-
-  // --- Plan 4 : Intermediaire natation (en cours) ---
+  // Plan natation (secondaire, en cours)
   const startDateSwim = new Date(now.getFullYear(), now.getMonth(), 1)
   startDateSwim.setDate(startDateSwim.getDate() - ((startDateSwim.getDay() + 6) % 7))
 
   const planSwim = await prisma.trainingPlan.create({
     data: {
-      userId: user.id,
+      userId: lea.id,
       name: 'Progression natation',
-      description: 'Ameliorer ma technique crawl et endurance pour les triathlons.',
+      description: 'Améliorer technique crawl et endurance pour les triathlons.',
       targetType: 'natation',
       durationWeeks: 8,
       level: 'intermediate',
@@ -528,31 +425,13 @@ async function main() {
   })
   await generateSessionsForPlan(planSwim.id, 'natation', 8, startDateSwim, 'intermediate')
 
-  // Marquer la premiere semaine comme terminee
-  const sessionsSwim = await prisma.trainingSession.findMany({
-    where: { planId: planSwim.id },
-  })
-  for (const s of sessionsSwim) {
-    if (s.weekNumber <= 1) {
-      await prisma.trainingSession.update({
-        where: { id: s.id },
-        data: {
-          completed: true,
-          actualDuration: s.duration ? Math.round(s.duration * (0.9 + Math.random() * 0.2)) : null,
-          notes: s.type === 'swim' ? 'Travail sur la respiration bilaterale' : undefined,
-        },
-      })
-    }
-  }
-  console.log(`Plan "${planSwim.name}" cree avec ${sessionsSwim.length} seances (semaine 1 terminee)`)
-
-  // --- Plan 5 : Debutant velo (plan partage / public) ---
+  // Plan partagé (public)
   const startDateBike = new Date(now.getFullYear(), now.getMonth() - 2, 10)
   const planBike = await prisma.trainingPlan.create({
     data: {
-      userId: user.id,
-      name: 'Debuter en velo de route',
-      description: 'Plan pour debutants qui souhaitent se mettre au velo de route progressivement.',
+      userId: lea.id,
+      name: 'Débuter en vélo de route',
+      description: 'Plan pour débutants qui souhaitent se mettre au vélo de route progressivement.',
       targetType: 'velo',
       durationWeeks: 6,
       level: 'beginner',
@@ -564,59 +443,299 @@ async function main() {
     },
   })
   await generateSessionsForPlan(planBike.id, 'velo', 6, startDateBike, 'beginner')
-
   const sessionsBike = await prisma.trainingSession.findMany({ where: { planId: planBike.id } })
-  // Tout marquer comme termine (plan fini et partage)
   for (const s of sessionsBike) {
     await prisma.trainingSession.update({
       where: { id: s.id },
       data: {
         completed: true,
         actualDuration: s.duration ? Math.round(s.duration * (0.85 + Math.random() * 0.3)) : null,
-        actualDistance: s.distance ? Math.round(s.distance * (0.9 + Math.random() * 0.15)) : null,
       },
     })
   }
-  console.log(`Plan "${planBike.name}" cree (public/partage, termine)`)
+  console.log('Plans de Léa créés')
 
   // =====================================================
-  // 6. Objectifs de saison (SeasonGoal)
+  // 7. CoachPlanSuggestion (status=sent → bannière orange)
+  // =====================================================
+  await prisma.coachPlanSuggestion.deleteMany({ where: { athleteId: lea.id } })
+
+  const suggestions = [
+    { id: 'focus_swim', title: 'Focus natation', delta: '+15 min', why: 'Point de progression identifié', enabled: true },
+    { id: 'sync_phys', title: 'Prépa physique synchronisée', delta: '3 séances', why: 'Julie B. confirmée', enabled: true },
+    { id: 'reduce_volume', title: 'Charge allégée', delta: '−30 min', why: 'Forme en légère baisse', enabled: false },
+  ]
+
+  await prisma.coachPlanSuggestion.create({
+    data: {
+      coachId: thomas.id,
+      athleteId: lea.id,
+      planId: planTri.id,
+      weekNumber: currentWeek,
+      suggestions: JSON.stringify(suggestions),
+      coachNote:
+        'Belle régularité Léa. On allège un peu le vélo et on cale le renfo avec Julie, focus technique natation.',
+      status: 'sent',
+      sentAt: new Date(now.getTime() - 2 * 60 * 60 * 1000), // il y a 2h
+    },
+  })
+  console.log('CoachPlanSuggestion créé (status=sent, semaine courante)')
+
+  // =====================================================
+  // 8. Wellness des autres athlètes (pour le roster coach)
   // =====================================================
 
-  // Nettoyer les anciens objectifs pour eviter les doublons au rejeu
-  await prisma.seasonGoal.deleteMany({ where: { userId: user.id } })
+  // Marc : CTL ~64, ATL ~56, TSB ~+8
+  await prisma.wellnessLog.deleteMany({ where: { userId: marc.id } })
+  const marcWellness = []
+  for (let i = 42; i >= 1; i--) {
+    const d = new Date(now)
+    d.setDate(d.getDate() - i)
+    d.setHours(0, 0, 0, 0)
+    marcWellness.push({
+      userId: marc.id,
+      date: d,
+      fatigue: 2,
+      mood: 4,
+      sleepQuality: 4,
+      sleepHours: 8,
+      muscleSoreness: 1,
+      stress: 2,
+      restingHR: 52 + Math.round(Math.random() * 4),
+      readinessScore: i <= 7 ? 56 + Math.round(Math.random() * 4 - 2) : 66 + Math.round(Math.random() * 4 - 2),
+    })
+  }
+  await prisma.wellnessLog.createMany({ data: marcWellness })
 
-  await prisma.seasonGoal.createMany({
+  // Sofia : CTL ~91, ATL ~93, TSB ~-2
+  await prisma.wellnessLog.deleteMany({ where: { userId: sofia.id } })
+  const sofiaWellness = []
+  for (let i = 42; i >= 1; i--) {
+    const d = new Date(now)
+    d.setDate(d.getDate() - i)
+    d.setHours(0, 0, 0, 0)
+    sofiaWellness.push({
+      userId: sofia.id,
+      date: d,
+      fatigue: 1,
+      mood: 5,
+      sleepQuality: 5,
+      sleepHours: 8.5,
+      muscleSoreness: 2,
+      stress: 1,
+      restingHR: 44 + Math.round(Math.random() * 4),
+      readinessScore: i <= 7 ? 93 + Math.round(Math.random() * 4 - 2) : 90 + Math.round(Math.random() * 4 - 2),
+    })
+  }
+  await prisma.wellnessLog.createMany({ data: sofiaWellness })
+  console.log('Wellness créé pour Marc et Sofia')
+
+  // Plans des autres athlètes (pour le roster)
+  await prisma.trainingPlan.deleteMany({ where: { userId: marc.id } })
+  await prisma.trainingPlan.deleteMany({ where: { userId: sofia.id } })
+
+  const marcPlan = await prisma.trainingPlan.create({
+    data: {
+      userId: marc.id,
+      name: 'Prepa Tri Sprint Vertou',
+      targetType: 'sprint',
+      durationWeeks: 8,
+      level: 'intermediate',
+      weeklyHours: 6,
+      startDate: new Date(mondayNow.getTime() - 3 * 7 * 24 * 60 * 60 * 1000),
+      endDate: new Date(mondayNow.getTime() + 5 * 7 * 24 * 60 * 60 * 1000),
+    },
+  })
+  await generateSessionsForPlan(marcPlan.id, 'sprint', 8, new Date(mondayNow.getTime() - 3 * 7 * 24 * 60 * 60 * 1000), 'intermediate')
+
+  const sofiaPlan = await prisma.trainingPlan.create({
+    data: {
+      userId: sofia.id,
+      name: 'Prepa Half Ironman Bauduen',
+      targetType: 'half-ironman',
+      durationWeeks: 16,
+      level: 'advanced',
+      weeklyHours: 12,
+      startDate: new Date(mondayNow.getTime() - 8 * 7 * 24 * 60 * 60 * 1000),
+      endDate: new Date(mondayNow.getTime() + 8 * 7 * 24 * 60 * 60 * 1000),
+    },
+  })
+  await generateSessionsForPlan(sofiaPlan.id, 'half-ironman', 16, new Date(mondayNow.getTime() - 8 * 7 * 24 * 60 * 60 * 1000), 'advanced')
+
+  // CoachPlanSuggestions pour les autres athlètes (pour le roster statut)
+  await prisma.coachPlanSuggestion.deleteMany({ where: { athleteId: marc.id } })
+  await prisma.coachPlanSuggestion.create({
+    data: {
+      coachId: thomas.id,
+      athleteId: marc.id,
+      planId: marcPlan.id,
+      weekNumber: currentWeek,
+      suggestions: JSON.stringify([{ id: 'extra_run', title: 'Sortie longue', delta: '+45 min', enabled: true }]),
+      status: 'sent',
+      sentAt: new Date(now.getTime() - 24 * 60 * 60 * 1000),
+    },
+  })
+
+  await prisma.coachPlanSuggestion.deleteMany({ where: { athleteId: sofia.id } })
+  await prisma.coachPlanSuggestion.create({
+    data: {
+      coachId: thomas.id,
+      athleteId: sofia.id,
+      planId: sofiaPlan.id,
+      weekNumber: currentWeek,
+      suggestions: JSON.stringify([{ id: 'bike_interval', title: 'Séance vélo seuil', delta: '+30 min', enabled: true }]),
+      status: 'draft',
+    },
+  })
+
+  console.log('Plans + suggestions créés pour Marc et Sofia')
+
+  // =====================================================
+  // 9. Threads de messages
+  // =====================================================
+  await prisma.message.deleteMany({
+    where: {
+      thread: {
+        participants: { contains: String(lea.id) },
+      },
+    },
+  })
+  await prisma.messageThread.deleteMany({
+    where: { participants: { contains: String(lea.id) } },
+  })
+
+  const twoHoursAgo = new Date(now.getTime() - 2 * 60 * 60 * 1000)
+  const yesterdayAt9 = new Date(now.getTime() - 22 * 60 * 60 * 1000)
+  const twoDaysAgo = new Date(now.getTime() - 48 * 60 * 60 * 1000)
+
+  // Thread 1 : Thomas (coach) ↔ Léa
+  const thread1 = await prisma.messageThread.create({
+    data: {
+      participants: JSON.stringify([thomas.id, lea.id]),
+      lastMessage: "J'ai ajusté ta semaine, focus natation.",
+      lastAt: twoHoursAgo,
+    },
+  })
+  await prisma.message.createMany({
     data: [
-      { userId: user.id, sport: 'run',  year: 2026, type: 'distance', targetValue: 500,  unit: 'km',       label: 'Distance course a pied' },
-      { userId: user.id, sport: 'bike', year: 2026, type: 'distance', targetValue: 2000, unit: 'km',       label: 'Distance velo' },
-      { userId: user.id, sport: 'swim', year: 2026, type: 'distance', targetValue: 50,   unit: 'km',       label: 'Distance natation' },
-      { userId: user.id, sport: 'all',  year: 2026, type: 'sessions', targetValue: 150,  unit: 'sessions', label: 'Seances totales' },
+      {
+        threadId: thread1.id,
+        senderId: thomas.id,
+        content: 'Salut Léa ! Belle semaine dernière, tu progresses bien en natation 💪',
+        readBy: JSON.stringify([thomas.id, lea.id]),
+        createdAt: new Date(twoHoursAgo.getTime() - 30 * 60 * 1000),
+      },
+      {
+        threadId: thread1.id,
+        senderId: lea.id,
+        content: 'Merci coach ! Par contre les jambes étaient lourdes sur la VMA.',
+        readBy: JSON.stringify([thomas.id, lea.id]),
+        createdAt: new Date(twoHoursAgo.getTime() - 20 * 60 * 1000),
+      },
+      {
+        threadId: thread1.id,
+        senderId: thomas.id,
+        content: "J'ai ajusté ta semaine, focus natation.",
+        readBy: JSON.stringify([thomas.id]),
+        createdAt: twoHoursAgo,
+      },
     ],
   })
-  console.log('4 objectifs de saison 2026 crees')
+
+  // Thread 2 : Julie ↔ Léa
+  const thread2 = await prisma.messageThread.create({
+    data: {
+      participants: JSON.stringify([julie.id, lea.id]),
+      lastMessage: 'Renfo décalé au mardi, ok pour toi ?',
+      lastAt: yesterdayAt9,
+    },
+  })
+  await prisma.message.createMany({
+    data: [
+      {
+        threadId: thread2.id,
+        senderId: julie.id,
+        content: 'Salut Léa, le renfo de lundi est décalé au mardi matin 9h. Ok pour toi ?',
+        readBy: JSON.stringify([julie.id]),
+        createdAt: new Date(yesterdayAt9.getTime() - 5 * 60 * 1000),
+      },
+      {
+        threadId: thread2.id,
+        senderId: julie.id,
+        content: 'Renfo décalé au mardi, ok pour toi ?',
+        readBy: JSON.stringify([julie.id]),
+        createdAt: yesterdayAt9,
+      },
+    ],
+  })
+
+  // Thread 3 : Groupe Half La Baule (Léa + Sofia + Marc)
+  const thread3 = await prisma.messageThread.create({
+    data: {
+      participants: JSON.stringify([lea.id, sofia.id, marc.id]),
+      groupName: 'Groupe Half La Baule',
+      lastMessage: 'Sofia : sortie longue dimanche ?',
+      lastAt: twoDaysAgo,
+    },
+  })
+  await prisma.message.createMany({
+    data: [
+      {
+        threadId: thread3.id,
+        senderId: sofia.id,
+        content: 'Sortie longue dimanche matin ? Je pars à 7h de la place du commerce.',
+        readBy: JSON.stringify([sofia.id, lea.id, marc.id]),
+        createdAt: new Date(twoDaysAgo.getTime() - 60 * 60 * 1000),
+      },
+      {
+        threadId: thread3.id,
+        senderId: marc.id,
+        content: 'Présent ! On fait combien de km ?',
+        readBy: JSON.stringify([marc.id]),
+        createdAt: new Date(twoDaysAgo.getTime() - 30 * 60 * 1000),
+      },
+      {
+        threadId: thread3.id,
+        senderId: sofia.id,
+        content: 'Sofia : sortie longue dimanche ?',
+        readBy: JSON.stringify([sofia.id]),
+        createdAt: twoDaysAgo,
+      },
+    ],
+  })
+
+  console.log('3 threads de messages créés')
 
   // =====================================================
-  // 7. Resume
+  // 10. Objectifs de saison
+  // =====================================================
+  await prisma.seasonGoal.deleteMany({ where: { userId: lea.id } })
+  await prisma.seasonGoal.createMany({
+    data: [
+      { userId: lea.id, sport: 'swim', year: 2026, type: 'distance', targetValue: 50,   unit: 'km',       label: 'Distance natation' },
+      { userId: lea.id, sport: 'bike', year: 2026, type: 'distance', targetValue: 2000, unit: 'km',       label: 'Distance vélo' },
+      { userId: lea.id, sport: 'run',  year: 2026, type: 'distance', targetValue: 500,  unit: 'km',       label: 'Distance course à pied' },
+      { userId: lea.id, sport: 'all',  year: 2026, type: 'sessions', targetValue: 150,  unit: 'sessions', label: 'Séances totales' },
+    ],
+  })
+  console.log('4 objectifs de saison créés')
+
+  // =====================================================
+  // Résumé
   // =====================================================
   console.log('\n========================================')
-  console.log('COMPTE DEMO PRET')
+  console.log('COMPTE DÉMO PRÊT')
   console.log('========================================')
-  console.log(`Email    : demo@triathlon-planner.fr`)
-  console.log(`Mot de passe : demo1234`)
+  console.log('Email    : demo@triathlon-planner.fr')
+  console.log('Mot de passe : demo1234')
   console.log('')
   console.log('Contenu :')
-  console.log(`  - ${competitions.length} competitions (3 passees, 5 futures + 1 race-day aujourd'hui)`)
-  console.log(`  - 5 plans d'entrainement :`)
-  console.log(`    1. "Mon premier 5K" (debutant, termine) — lie a Deauville`)
-  console.log(`    2. "Prepa Triathlon La Baule" (intermediaire, en cours semaine 5/12)`)
-  console.log(`    3. "Prepa Marathon Bordeaux" (avance, futur)`)
-  console.log(`    4. "Progression natation" (intermediaire, semaine 2/8)`)
-  console.log(`    5. "Debuter en velo de route" (debutant, termine, partage)`)
-  console.log(`  - Equipements checklist sur 2 competitions`)
-  console.log(`  - ${uniqueWellness.length} wellness logs (7j pre-course x3 + 14j recents)`)
-  console.log(`  - 4 objectifs de saison 2026`)
-  console.log(`  - Preferences de notification configurees`)
+  console.log(`  - ${competitions.length} compétitions (2 passées, 3 futures)`)
+  console.log('  - 3 plans (Triathlon Nantes sem.6/12, Natation, Vélo)')
+  console.log('  - 1 suggestion coach envoyée (bannière orange visible)')
+  console.log('  - 3 threads de messages')
+  console.log('  - Club "Triathlon Club Nantais" (Thomas coach + 4 athlètes)')
+  console.log('  - Wellness 42j pour Léa, Marc, Sofia')
   console.log('========================================')
 }
 
@@ -624,6 +743,7 @@ async function main() {
 
 function getMonday(d: Date): Date {
   const date = new Date(d)
+  date.setHours(0, 0, 0, 0)
   const day = date.getDay()
   const diff = date.getDate() - day + (day === 0 ? -6 : 1)
   date.setDate(diff)
@@ -633,37 +753,15 @@ function getMonday(d: Date): Date {
 function getRandomNote(type: string): string | undefined {
   if (Math.random() > 0.4) return undefined
   const notes: Record<string, string[]> = {
-    swim: [
-      'Bonnes sensations dans l\'eau',
-      'Travail sur le roulis OK',
-      'Un peu fatigue, 200m de moins que prevu',
-      'Meilleur chrono au 400m !',
-    ],
-    bike: [
-      'Vent de face au retour',
-      'Bonnes jambes, cadence elevee',
-      'Crevaison au km 15, repare en 8 min',
-      'Nouveau record sur le segment Strava',
-    ],
-    run: [
-      'Legs lourdes au debut puis ca s\'est debloque',
-      'Bonne seance, allures respectees',
-      'Un peu chaud, bien hydrate',
-      'Sensations top, progression constante',
-    ],
-    strength: [
-      'Gainage + squats OK',
-      'Ajout de poids sur les fentes',
-    ],
-    brick: [
-      'Transition fluide, jambes OK apres le velo',
-      'Dur au debut de la course puis ca passe',
-    ],
+    swim: ['Bonnes sensations dans l\'eau', 'Travail sur le roulis OK', 'Meilleur chrono au 400m !'],
+    bike: ['Vent de face au retour', 'Bonnes jambes, cadence élevée', 'Nouveau record sur le segment'],
+    run: ['Legs lourdes au début puis ça s\'est débloqué', 'Bonne séance, allures respectées'],
+    strength: ['Gainage + squats OK', 'Ajout de poids sur les fentes'],
+    brick: ['Transition fluide, jambes OK après le vélo'],
     rest: [],
   }
   const pool = notes[type] || []
-  if (pool.length === 0) return undefined
-  return pool[Math.floor(Math.random() * pool.length)]
+  return pool.length > 0 ? pool[Math.floor(Math.random() * pool.length)] : undefined
 }
 
 main()
