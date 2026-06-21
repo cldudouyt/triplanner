@@ -168,7 +168,7 @@ export default function StatisticsPage() {
                   tickLine={false}
                   tickFormatter={(v: number) => `${v}h`}
                 />
-                <Tooltip formatter={(v: number, n: string) => [`${v}h`, n]} />
+                <Tooltip formatter={(v: unknown) => `${v}h`} />
                 <Bar dataKey="swim" stackId="a" fill="#06B6D4" />
                 <Bar dataKey="bike" stackId="a" fill="#10B981" />
                 <Bar dataKey="run" stackId="a" fill="#F97316" radius={[4, 4, 0, 0]} />

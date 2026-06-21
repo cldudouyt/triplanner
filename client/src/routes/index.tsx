@@ -28,7 +28,6 @@ function SmartRoot() {
 
 // ─── Lazy pages ───────────────────────────────────────────────────────────────
 
-const LandingPage = lazy(() => import('@/pages/LandingPage'))
 const LoginPage = lazy(() => import('@/pages/LoginPage'))
 const RegisterPage = lazy(() => import('@/pages/RegisterPage'))
 const ForgotPasswordPage = lazy(() => import('@/pages/ForgotPasswordPage'))

@@ -85,7 +85,7 @@ export default function ClubCoachPage() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Espace Coach</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            {clubInfo?.name ?? 'Triathlon Club Nantais'} · {clubInfo?.stats?.athletesCount ?? 12} athlètes · saison 2026
+            {clubInfo?.club?.name ?? 'Triathlon Club Nantais'} · {clubInfo?.stats?.athletesCount ?? 12} athlètes · saison 2026
           </p>
         </div>
         {/* Toggle Espace coach / Aperçu athlète */}
@@ -201,7 +201,7 @@ export default function ClubCoachPage() {
                 {/* Badge statut */}
                 {(() => {
                   const s = athlete.suggestionStatus
-                  if (s === 'pending' || s === 'plan_to_validate') {
+                  if (s === 'plan_to_validate') {
                     return (
                       <span className="flex items-center gap-1.5 text-xs font-medium bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 px-3 py-1.5 rounded-full shrink-0">
                         <span className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-dot" />
