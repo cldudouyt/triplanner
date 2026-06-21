@@ -4,7 +4,7 @@ import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '.
 import { sendPasswordResetEmail, sendEmail } from '../../utils/email.js'
 import { config } from '../../config/env.js'
 import crypto from 'node:crypto'
-import type { RegisterInput, LoginInput, ForgotPasswordInput, ResetPasswordInput } from './auth.schema.js'
+import type { RegisterInput, LoginInput, ForgotPasswordInput, ResetPasswordInput, OnboardingInput } from './auth.schema.js'
 
 export async function register(input: RegisterInput) {
   const existing = await prisma.user.findUnique({ where: { email: input.email } })
@@ -78,6 +78,7 @@ export async function login(input: LoginInput) {
       firstName: user.firstName,
       lastName: user.lastName,
       isAdmin: user.isAdmin,
+      onboardingCompleted: user.onboardingCompleted,
     },
   }
 }
@@ -121,8 +122,21 @@ export async function logout(refreshToken: string) {
 export async function getProfile(userId: number) {
   return prisma.user.findUnique({
     where: { id: userId },
-    select: { id: true, email: true, firstName: true, lastName: true, isAdmin: true, createdAt: true },
+    select: { id: true, email: true, firstName: true, lastName: true, isAdmin: true, createdAt: true, onboardingCompleted: true, level: true, weeklyHoursAvailable: true },
   })
+}
+
+export async function completeOnboarding(userId: number, input: OnboardingInput) {
+  const user = await prisma.user.update({
+    where: { id: userId },
+    data: {
+      onboardingCompleted: true,
+      level: input.level,
+      weeklyHoursAvailable: input.weeklyHoursAvailable,
+    },
+    select: { id: true, email: true, firstName: true, lastName: true, isAdmin: true, onboardingCompleted: true, level: true, weeklyHoursAvailable: true },
+  })
+  return user
 }
 
 const RESET_CODE_EXPIRY_MS = 15 * 60 * 1000 // 15 minutes

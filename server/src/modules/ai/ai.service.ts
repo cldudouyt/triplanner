@@ -187,6 +187,87 @@ Reponds en JSON avec ce format exact :
   })
 }
 
+export interface CoachAISuggestion {
+  id: string
+  title: string
+  delta: string
+  why: string
+  enabled: boolean
+}
+
+interface CoachSuggestionsParams {
+  athleteName: string
+  planName: string
+  weekNumber: number
+  ctl: number
+  tsb: number
+  recentWellness?: { fatigue: number; readinessScore: number }
+  nextCompetition?: { name: string; daysUntil: number }
+}
+
+export async function generateCoachSuggestions(params: CoachSuggestionsParams): Promise<CoachAISuggestion[]> {
+  const client = getClient()
+  if (!client) {
+    // Fallback to default suggestions when AI is not configured
+    return [
+      { id: 'maintain_load', title: 'Maintien de charge', delta: '±0 min', why: 'Forme stable, continuer le plan prévu', enabled: true },
+      { id: 'recovery_day', title: 'Séance récup ajoutée', delta: '+1 séance', why: 'Optimisation récupération active', enabled: false },
+    ]
+  }
+
+  const systemPrompt = `Tu es un coach triathlon expert. Tu analyses la forme d'un athlète et proposes 3 à 4 ajustements précis pour la semaine à venir. Réponds UNIQUEMENT avec du JSON valide.`
+
+  const tsbStatus = params.tsb > 5 ? 'forme positive (TSB +)' : params.tsb < -10 ? 'surcharge (TSB -)' : 'équilibre (TSB neutre)'
+  const readinessLabel = params.recentWellness ? ` · score forme ${params.recentWellness.readinessScore}/100` : ''
+
+  const userPrompt = `Athlète : ${params.athleteName}
+Plan : ${params.planName} — Semaine ${params.weekNumber}
+CTL (forme de fond) : ${Math.round(params.ctl)}
+TSB (fraîcheur) : ${Math.round(params.tsb)} → ${tsbStatus}${readinessLabel}${params.recentWellness ? ` · fatigue ${params.recentWellness.fatigue}/5` : ''}
+${params.nextCompetition ? `Prochaine compétition : ${params.nextCompetition.name} dans ${params.nextCompetition.daysUntil} jours` : ''}
+
+Génère 3-4 ajustements de plan pour cette semaine au format :
+[
+  {
+    "id": "slug_unique",
+    "title": "Titre court (max 5 mots)",
+    "delta": "ex: −30 min ou +1 séance ou ×1.1",
+    "why": "Explication courte basée sur les données ci-dessus",
+    "enabled": true
+  }
+]`
+
+  try {
+    const stream = client.messages.stream({
+      model: 'claude-opus-4-8',
+      max_tokens: 1024,
+      thinking: { type: 'adaptive' },
+      system: systemPrompt,
+      messages: [{ role: 'user', content: userPrompt }],
+    })
+
+    const message = await stream.finalMessage()
+    const textBlock = message.content.find(b => b.type === 'text')
+    const content = textBlock?.type === 'text' ? textBlock.text : ''
+
+    const jsonStr = extractJSON(content.includes('[') ? content : `{"arr":${content}}`)
+    let parsed: CoachAISuggestion[]
+
+    if (content.trimStart().startsWith('[')) {
+      parsed = JSON.parse(content.trim())
+    } else {
+      const obj = JSON.parse(jsonStr) as { arr?: CoachAISuggestion[] } | CoachAISuggestion[]
+      parsed = Array.isArray(obj) ? obj : (obj as { arr: CoachAISuggestion[] }).arr ?? []
+    }
+
+    return parsed.filter(s => s.id && s.title && s.why)
+  } catch {
+    return [
+      { id: 'maintain_load', title: 'Maintien de charge', delta: '±0 min', why: 'Plan stable cette semaine', enabled: true },
+    ]
+  }
+}
+
 export async function buildChatContext(userId: number): Promise<string> {
   const now = new Date()
   const startOfDay = new Date(now)

@@ -1,7 +1,7 @@
 import axios from 'axios'
 
 const api = axios.create({
-  baseURL: '/api/v1',
+  baseURL: (import.meta.env.VITE_API_URL ?? '') + '/api/v1',
   withCredentials: true,
 })
 
@@ -17,7 +17,7 @@ export function getAccessToken() {
 
 // Separate axios instance for refresh calls (no interceptors)
 export const rawAxios = axios.create({
-  baseURL: '/api/v1',
+  baseURL: (import.meta.env.VITE_API_URL ?? '') + '/api/v1',
   withCredentials: true,
 })
 

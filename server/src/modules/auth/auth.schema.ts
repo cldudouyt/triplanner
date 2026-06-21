@@ -22,7 +22,14 @@ export const resetPasswordSchema = z.object({
   newPassword: z.string().min(8, 'Le mot de passe doit contenir au moins 8 caractères'),
 })
 
+export const onboardingSchema = z.object({
+  level: z.enum(['débutant', 'intermédiaire', 'avancé', 'élite']),
+  weeklyHoursAvailable: z.number().min(1).max(40),
+  sports: z.array(z.enum(['swim', 'bike', 'run'])).min(1).optional(),
+})
+
 export type RegisterInput = z.infer<typeof registerSchema>
 export type LoginInput = z.infer<typeof loginSchema>
 export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>
+export type OnboardingInput = z.infer<typeof onboardingSchema>

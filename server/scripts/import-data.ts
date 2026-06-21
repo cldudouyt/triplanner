@@ -1,5 +1,5 @@
-import 'dotenv/config'
-import { PrismaClient } from '../generated/prisma/client.js'
+﻿import 'dotenv/config'
+import { PrismaClient } from '../generated/prisma/index.js'
 import { PrismaBetterSqlite3 } from '@prisma/adapter-better-sqlite3'
 
 const adapter = new PrismaBetterSqlite3({ url: process.env.DATABASE_URL! })
@@ -16,12 +16,12 @@ async function main() {
     console.log('Utilisateurs existants:', allUsers)
     process.exit(1)
   }
-  console.log(`Utilisateur trouvé: ${user.firstName} ${user.lastName} (id: ${user.id})`)
+  console.log(`Utilisateur trouvÃ©: ${user.firstName} ${user.lastName} (id: ${user.id})`)
 
   // =====================================================
   // 1. COMPETITIONS
   // =====================================================
-  console.log('\n--- Import des compétitions ---')
+  console.log('\n--- Import des compÃ©titions ---')
 
   const competitions = [
     {
@@ -82,9 +82,9 @@ async function main() {
       status: 'registered',
     },
     {
-      name: 'Triathlon de Montreuil-Juigné',
+      name: 'Triathlon de Montreuil-JuignÃ©',
       date: new Date('2026-06-07'),
-      location: 'Montreuil-Juigné',
+      location: 'Montreuil-JuignÃ©',
       type: 'triathlon',
       subType: 'olympic',
       swimDistance: 1.5,
@@ -94,9 +94,9 @@ async function main() {
       status: 'registered',
     },
     {
-      name: 'Triathlon du Val-André',
+      name: 'Triathlon du Val-AndrÃ©',
       date: new Date('2026-07-04'),
-      location: 'Pléneuf Val André',
+      location: 'PlÃ©neuf Val AndrÃ©',
       type: 'triathlon',
       subType: 'sprint',
       swimDistance: 0.75,
@@ -176,13 +176,13 @@ async function main() {
   // =====================================================
   // 2. PLAN D'ENTRAINEMENT + SESSIONS
   // =====================================================
-  console.log('\n--- Import du plan d\'entraînement ---')
+  console.log('\n--- Import du plan d\'entraÃ®nement ---')
 
   const plan = await prisma.trainingPlan.create({
     data: {
       userId: user.id,
       name: 'Semi marathon Nantes',
-      description: 'Plan de préparation 12 semaines pour le semi-marathon de Nantes (26 avril 2026). Objectif : terminer en bonne condition.',
+      description: 'Plan de prÃ©paration 12 semaines pour le semi-marathon de Nantes (26 avril 2026). Objectif : terminer en bonne condition.',
       targetType: 'running',
       durationWeeks: 12,
       level: 'intermediate',
@@ -191,7 +191,7 @@ async function main() {
       endDate: new Date('2026-04-27'),
     },
   })
-  console.log(`  Plan créé: ${plan.name} (id: ${plan.id})`)
+  console.log(`  Plan crÃ©Ã©: ${plan.name} (id: ${plan.id})`)
 
   // Link plan to the semi-marathon competition
   const semiNantes = await prisma.competition.findFirst({
@@ -201,81 +201,81 @@ async function main() {
     await prisma.planCompetition.create({
       data: { planId: plan.id, competitionId: semiNantes.id, isPrimary: true, order: 0 },
     })
-    console.log(`  Plan lié au semi-marathon de Nantes`)
+    console.log(`  Plan liÃ© au semi-marathon de Nantes`)
   }
 
-  console.log('\n--- Import des séances ---')
+  console.log('\n--- Import des sÃ©ances ---')
 
   const sessions = [
     // Week 1
-    { weekNumber: 1, dayOfWeek: 1, date: '2026-02-04', type: 'run', title: 'Footing récupération', duration: 25, distance: 4.2, intensity: 'easy' },
-    { weekNumber: 1, dayOfWeek: 2, date: '2026-02-05', type: 'run', title: 'Fractionné court', duration: 35, distance: 6.3, intensity: 'interval' },
+    { weekNumber: 1, dayOfWeek: 1, date: '2026-02-04', type: 'run', title: 'Footing rÃ©cupÃ©ration', duration: 25, distance: 4.2, intensity: 'easy' },
+    { weekNumber: 1, dayOfWeek: 2, date: '2026-02-05', type: 'run', title: 'FractionnÃ© court', duration: 35, distance: 6.3, intensity: 'interval' },
     { weekNumber: 1, dayOfWeek: 3, date: '2026-02-06', type: 'strength', title: 'Renforcement / PPG', duration: 28, distance: null, intensity: 'moderate' },
     { weekNumber: 1, dayOfWeek: 5, date: '2026-02-08', type: 'run', title: 'Tempo / Seuil', duration: 39, distance: 7.7, intensity: 'moderate' },
     { weekNumber: 1, dayOfWeek: 7, date: '2026-02-10', type: 'run', title: 'Sortie longue', duration: 56, distance: 9.8, intensity: 'easy' },
     // Week 2
-    { weekNumber: 2, dayOfWeek: 1, date: '2026-02-11', type: 'run', title: 'Footing récupération', duration: 25, distance: 4.2, intensity: 'easy' },
-    { weekNumber: 2, dayOfWeek: 2, date: '2026-02-12', type: 'run', title: 'Fractionné court', duration: 35, distance: 6.3, intensity: 'interval' },
+    { weekNumber: 2, dayOfWeek: 1, date: '2026-02-11', type: 'run', title: 'Footing rÃ©cupÃ©ration', duration: 25, distance: 4.2, intensity: 'easy' },
+    { weekNumber: 2, dayOfWeek: 2, date: '2026-02-12', type: 'run', title: 'FractionnÃ© court', duration: 35, distance: 6.3, intensity: 'interval' },
     { weekNumber: 2, dayOfWeek: 3, date: '2026-02-13', type: 'strength', title: 'Renforcement / PPG', duration: 28, distance: null, intensity: 'moderate' },
     { weekNumber: 2, dayOfWeek: 5, date: '2026-02-15', type: 'run', title: 'Tempo / Seuil', duration: 39, distance: 7.7, intensity: 'moderate' },
     { weekNumber: 2, dayOfWeek: 7, date: '2026-02-17', type: 'run', title: 'Sortie longue', duration: 56, distance: 9.8, intensity: 'easy' },
     // Week 3
-    { weekNumber: 3, dayOfWeek: 1, date: '2026-02-18', type: 'run', title: 'Footing récupération', duration: 25, distance: 4.2, intensity: 'easy' },
-    { weekNumber: 3, dayOfWeek: 2, date: '2026-02-19', type: 'run', title: 'Fractionné court', duration: 35, distance: 6.3, intensity: 'interval' },
+    { weekNumber: 3, dayOfWeek: 1, date: '2026-02-18', type: 'run', title: 'Footing rÃ©cupÃ©ration', duration: 25, distance: 4.2, intensity: 'easy' },
+    { weekNumber: 3, dayOfWeek: 2, date: '2026-02-19', type: 'run', title: 'FractionnÃ© court', duration: 35, distance: 6.3, intensity: 'interval' },
     { weekNumber: 3, dayOfWeek: 3, date: '2026-02-20', type: 'strength', title: 'Renforcement / PPG', duration: 28, distance: null, intensity: 'moderate' },
     { weekNumber: 3, dayOfWeek: 5, date: '2026-02-22', type: 'run', title: 'Tempo / Seuil', duration: 39, distance: 7.7, intensity: 'moderate' },
     { weekNumber: 3, dayOfWeek: 7, date: '2026-02-24', type: 'run', title: 'Sortie longue', duration: 56, distance: 9.8, intensity: 'easy' },
     // Week 4
-    { weekNumber: 4, dayOfWeek: 1, date: '2026-02-25', type: 'run', title: 'Footing récupération', duration: 32, distance: 5.4, intensity: 'easy' },
-    { weekNumber: 4, dayOfWeek: 2, date: '2026-02-26', type: 'run', title: 'Fractionné court', duration: 45, distance: 8.1, intensity: 'interval' },
+    { weekNumber: 4, dayOfWeek: 1, date: '2026-02-25', type: 'run', title: 'Footing rÃ©cupÃ©ration', duration: 32, distance: 5.4, intensity: 'easy' },
+    { weekNumber: 4, dayOfWeek: 2, date: '2026-02-26', type: 'run', title: 'FractionnÃ© court', duration: 45, distance: 8.1, intensity: 'interval' },
     { weekNumber: 4, dayOfWeek: 3, date: '2026-02-27', type: 'strength', title: 'Renforcement / PPG', duration: 36, distance: null, intensity: 'moderate' },
     { weekNumber: 4, dayOfWeek: 5, date: '2026-03-01', type: 'run', title: 'Tempo / Seuil', duration: 50, distance: 9.9, intensity: 'moderate' },
     { weekNumber: 4, dayOfWeek: 7, date: '2026-03-03', type: 'run', title: 'Sortie longue', duration: 72, distance: 12.6, intensity: 'easy' },
     // Week 5
-    { weekNumber: 5, dayOfWeek: 1, date: '2026-03-04', type: 'run', title: 'Footing récupération', duration: 32, distance: 5.4, intensity: 'easy' },
-    { weekNumber: 5, dayOfWeek: 2, date: '2026-03-05', type: 'run', title: 'Fractionné court', duration: 45, distance: 8.1, intensity: 'interval' },
+    { weekNumber: 5, dayOfWeek: 1, date: '2026-03-04', type: 'run', title: 'Footing rÃ©cupÃ©ration', duration: 32, distance: 5.4, intensity: 'easy' },
+    { weekNumber: 5, dayOfWeek: 2, date: '2026-03-05', type: 'run', title: 'FractionnÃ© court', duration: 45, distance: 8.1, intensity: 'interval' },
     { weekNumber: 5, dayOfWeek: 3, date: '2026-03-06', type: 'strength', title: 'Renforcement / PPG', duration: 36, distance: null, intensity: 'moderate' },
     { weekNumber: 5, dayOfWeek: 5, date: '2026-03-08', type: 'run', title: 'Tempo / Seuil', duration: 50, distance: 9.9, intensity: 'moderate' },
     { weekNumber: 5, dayOfWeek: 7, date: '2026-03-10', type: 'run', title: 'Sortie longue', duration: 72, distance: 12.6, intensity: 'easy' },
     // Week 6
-    { weekNumber: 6, dayOfWeek: 1, date: '2026-03-11', type: 'run', title: 'Footing récupération', duration: 32, distance: 5.4, intensity: 'easy' },
-    { weekNumber: 6, dayOfWeek: 2, date: '2026-03-12', type: 'run', title: 'Fractionné court', duration: 45, distance: 8.1, intensity: 'interval' },
+    { weekNumber: 6, dayOfWeek: 1, date: '2026-03-11', type: 'run', title: 'Footing rÃ©cupÃ©ration', duration: 32, distance: 5.4, intensity: 'easy' },
+    { weekNumber: 6, dayOfWeek: 2, date: '2026-03-12', type: 'run', title: 'FractionnÃ© court', duration: 45, distance: 8.1, intensity: 'interval' },
     { weekNumber: 6, dayOfWeek: 3, date: '2026-03-13', type: 'strength', title: 'Renforcement / PPG', duration: 36, distance: null, intensity: 'moderate' },
     { weekNumber: 6, dayOfWeek: 5, date: '2026-03-15', type: 'run', title: 'Tempo / Seuil', duration: 50, distance: 9.9, intensity: 'moderate' },
     { weekNumber: 6, dayOfWeek: 7, date: '2026-03-17', type: 'run', title: 'Sortie longue', duration: 72, distance: 12.6, intensity: 'easy' },
     // Week 7
-    { weekNumber: 7, dayOfWeek: 1, date: '2026-03-18', type: 'run', title: 'Footing récupération', duration: 32, distance: 5.4, intensity: 'easy' },
-    { weekNumber: 7, dayOfWeek: 2, date: '2026-03-19', type: 'run', title: 'Fractionné court', duration: 45, distance: 8.1, intensity: 'interval' },
+    { weekNumber: 7, dayOfWeek: 1, date: '2026-03-18', type: 'run', title: 'Footing rÃ©cupÃ©ration', duration: 32, distance: 5.4, intensity: 'easy' },
+    { weekNumber: 7, dayOfWeek: 2, date: '2026-03-19', type: 'run', title: 'FractionnÃ© court', duration: 45, distance: 8.1, intensity: 'interval' },
     { weekNumber: 7, dayOfWeek: 3, date: '2026-03-20', type: 'strength', title: 'Renforcement / PPG', duration: 36, distance: null, intensity: 'moderate' },
     { weekNumber: 7, dayOfWeek: 5, date: '2026-03-22', type: 'run', title: 'Tempo / Seuil', duration: 50, distance: 9.9, intensity: 'moderate' },
     { weekNumber: 7, dayOfWeek: 7, date: '2026-03-24', type: 'run', title: 'Sortie longue', duration: 72, distance: 12.6, intensity: 'easy' },
     // Week 8
-    { weekNumber: 8, dayOfWeek: 1, date: '2026-03-25', type: 'run', title: 'Footing récupération', duration: 32, distance: 5.4, intensity: 'easy' },
-    { weekNumber: 8, dayOfWeek: 2, date: '2026-03-26', type: 'run', title: 'Fractionné court', duration: 45, distance: 8.1, intensity: 'interval' },
+    { weekNumber: 8, dayOfWeek: 1, date: '2026-03-25', type: 'run', title: 'Footing rÃ©cupÃ©ration', duration: 32, distance: 5.4, intensity: 'easy' },
+    { weekNumber: 8, dayOfWeek: 2, date: '2026-03-26', type: 'run', title: 'FractionnÃ© court', duration: 45, distance: 8.1, intensity: 'interval' },
     { weekNumber: 8, dayOfWeek: 3, date: '2026-03-27', type: 'strength', title: 'Renforcement / PPG', duration: 36, distance: null, intensity: 'moderate' },
     { weekNumber: 8, dayOfWeek: 5, date: '2026-03-29', type: 'run', title: 'Tempo / Seuil', duration: 50, distance: 9.9, intensity: 'moderate' },
     { weekNumber: 8, dayOfWeek: 7, date: '2026-03-30', type: 'run', title: 'Sortie longue', duration: 72, distance: 12.6, intensity: 'easy' },
     // Week 9
-    { weekNumber: 9, dayOfWeek: 1, date: '2026-03-31', type: 'run', title: 'Footing récupération', duration: 35, distance: 6.0, intensity: 'easy' },
-    { weekNumber: 9, dayOfWeek: 2, date: '2026-04-01', type: 'run', title: 'Fractionné court', duration: 50, distance: 9.0, intensity: 'interval' },
+    { weekNumber: 9, dayOfWeek: 1, date: '2026-03-31', type: 'run', title: 'Footing rÃ©cupÃ©ration', duration: 35, distance: 6.0, intensity: 'easy' },
+    { weekNumber: 9, dayOfWeek: 2, date: '2026-04-01', type: 'run', title: 'FractionnÃ© court', duration: 50, distance: 9.0, intensity: 'interval' },
     { weekNumber: 9, dayOfWeek: 3, date: '2026-04-02', type: 'strength', title: 'Renforcement / PPG', duration: 40, distance: null, intensity: 'moderate' },
     { weekNumber: 9, dayOfWeek: 5, date: '2026-04-04', type: 'run', title: 'Tempo / Seuil', duration: 55, distance: 11.0, intensity: 'moderate' },
     { weekNumber: 9, dayOfWeek: 7, date: '2026-04-06', type: 'run', title: 'Sortie longue', duration: 80, distance: 14.0, intensity: 'easy' },
     // Week 10
-    { weekNumber: 10, dayOfWeek: 1, date: '2026-04-07', type: 'run', title: 'Footing récupération', duration: 35, distance: 6.0, intensity: 'easy' },
-    { weekNumber: 10, dayOfWeek: 2, date: '2026-04-08', type: 'run', title: 'Fractionné court', duration: 50, distance: 9.0, intensity: 'interval' },
+    { weekNumber: 10, dayOfWeek: 1, date: '2026-04-07', type: 'run', title: 'Footing rÃ©cupÃ©ration', duration: 35, distance: 6.0, intensity: 'easy' },
+    { weekNumber: 10, dayOfWeek: 2, date: '2026-04-08', type: 'run', title: 'FractionnÃ© court', duration: 50, distance: 9.0, intensity: 'interval' },
     { weekNumber: 10, dayOfWeek: 3, date: '2026-04-09', type: 'strength', title: 'Renforcement / PPG', duration: 40, distance: null, intensity: 'moderate' },
     { weekNumber: 10, dayOfWeek: 5, date: '2026-04-11', type: 'run', title: 'Tempo / Seuil', duration: 55, distance: 11.0, intensity: 'moderate' },
     { weekNumber: 10, dayOfWeek: 7, date: '2026-04-13', type: 'run', title: 'Sortie longue', duration: 80, distance: 14.0, intensity: 'easy' },
-    // Week 11 (affûtage)
-    { weekNumber: 11, dayOfWeek: 1, date: '2026-04-14', type: 'run', title: 'Footing récupération', duration: 18, distance: 3.0, intensity: 'easy' },
-    { weekNumber: 11, dayOfWeek: 2, date: '2026-04-15', type: 'run', title: 'Fractionné court', duration: 25, distance: 4.5, intensity: 'moderate' },
+    // Week 11 (affÃ»tage)
+    { weekNumber: 11, dayOfWeek: 1, date: '2026-04-14', type: 'run', title: 'Footing rÃ©cupÃ©ration', duration: 18, distance: 3.0, intensity: 'easy' },
+    { weekNumber: 11, dayOfWeek: 2, date: '2026-04-15', type: 'run', title: 'FractionnÃ© court', duration: 25, distance: 4.5, intensity: 'moderate' },
     { weekNumber: 11, dayOfWeek: 3, date: '2026-04-16', type: 'strength', title: 'Renforcement / PPG', duration: 20, distance: null, intensity: 'moderate' },
     { weekNumber: 11, dayOfWeek: 5, date: '2026-04-18', type: 'run', title: 'Tempo / Seuil', duration: 28, distance: 5.5, intensity: 'moderate' },
     { weekNumber: 11, dayOfWeek: 7, date: '2026-04-20', type: 'run', title: 'Sortie longue', duration: 40, distance: 7.0, intensity: 'easy' },
-    // Week 12 (affûtage final)
-    { weekNumber: 12, dayOfWeek: 1, date: '2026-04-21', type: 'run', title: 'Footing récupération', duration: 18, distance: 3.0, intensity: 'easy' },
-    { weekNumber: 12, dayOfWeek: 2, date: '2026-04-22', type: 'run', title: 'Fractionné court', duration: 25, distance: 4.5, intensity: 'moderate' },
+    // Week 12 (affÃ»tage final)
+    { weekNumber: 12, dayOfWeek: 1, date: '2026-04-21', type: 'run', title: 'Footing rÃ©cupÃ©ration', duration: 18, distance: 3.0, intensity: 'easy' },
+    { weekNumber: 12, dayOfWeek: 2, date: '2026-04-22', type: 'run', title: 'FractionnÃ© court', duration: 25, distance: 4.5, intensity: 'moderate' },
     { weekNumber: 12, dayOfWeek: 3, date: '2026-04-23', type: 'strength', title: 'Renforcement / PPG', duration: 20, distance: null, intensity: 'moderate' },
     { weekNumber: 12, dayOfWeek: 5, date: '2026-04-25', type: 'run', title: 'Tempo / Seuil', duration: 28, distance: 5.5, intensity: 'moderate' },
     { weekNumber: 12, dayOfWeek: 7, date: '2026-04-27', type: 'run', title: 'Sortie longue', duration: 40, distance: 7.0, intensity: 'easy' },
@@ -297,9 +297,9 @@ async function main() {
       },
     })
   }
-  console.log(`  ${sessions.length} séances créées`)
+  console.log(`  ${sessions.length} sÃ©ances crÃ©Ã©es`)
 
-  console.log('\n--- Import terminé avec succès ---')
+  console.log('\n--- Import terminÃ© avec succÃ¨s ---')
 }
 
 main()

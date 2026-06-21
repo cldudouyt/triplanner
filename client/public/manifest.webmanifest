@@ -1,0 +1,20 @@
+{
+  "name": "Tri Planner",
+  "short_name": "TriPlanner",
+  "description": "Application de planification triathlon - compétitions, entraînements, IA",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "orientation": "portrait",
+  "theme_color": "#EA580C",
+  "background_color": "#F4F5F7",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["sports", "health", "fitness"],
+  "lang": "fr"
+}

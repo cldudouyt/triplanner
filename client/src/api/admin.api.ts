@@ -111,6 +111,55 @@ export interface SystemLogs {
   }>
 }
 
+// ─── Club CODIR Admin ──────────────────────────────────────────────────────────
+
+export interface AdminMember {
+  id: number
+  firstName: string
+  lastName: string
+  email: string
+  role: string
+  group: string | null
+  status: string
+}
+
+export interface AdminInvitation {
+  id: number
+  email: string
+  firstName: string
+  lastName: string
+  role: string
+  groupName: string | null
+  createdAt: string
+  expiresAt: string
+  status: string
+}
+
+export interface AdminStats {
+  members: number
+  coaches: number
+  admins: number
+  pendingInvitations: number
+  recentActivity: Array<{
+    id: number
+    email: string
+    role: string
+    createdAt: string
+    invitedBy: { firstName: string; lastName: string }
+  }>
+}
+
+export const adminCoachApi = {
+  getStats: () => api.get<AdminStats>('/admin/club-stats'),
+  getMembers: (filter?: string) => api.get<AdminMember[]>('/admin/members', { params: { filter } }),
+  updateRole: (id: number, role: string) => api.patch(`/admin/members/${id}/role`, { role }),
+  getInvitations: () => api.get<AdminInvitation[]>('/admin/invitations'),
+  createInvitation: (data: { email: string; firstName: string; lastName: string; role: string; groupName?: string }) =>
+    api.post<AdminInvitation>('/admin/invitations', data),
+  resendInvitation: (id: number) => api.post(`/admin/invitations/${id}/resend`),
+  deleteInvitation: (id: number) => api.delete(`/admin/invitations/${id}`),
+}
+
 export const adminApi = {
   // Dashboard
   getDashboard: () => api.get<DashboardStats>('/admin/dashboard'),

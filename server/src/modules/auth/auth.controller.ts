@@ -14,11 +14,12 @@ export async function register(req: Request, res: Response) {
   }
 }
 
+const isProd = process.env.NODE_ENV === 'production'
 const COOKIE_OPTIONS = {
   httpOnly: true,
-  secure: process.env.NODE_ENV === 'production',
-  sameSite: 'lax' as const,
-  maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+  secure: isProd,
+  sameSite: (isProd ? 'none' : 'lax') as 'none' | 'lax',
+  maxAge: 7 * 24 * 60 * 60 * 1000,
   path: '/',
 }
 
@@ -91,4 +92,10 @@ export async function resetPassword(req: Request, res: Response) {
     }
     throw err
   }
+}
+
+export async function completeOnboarding(req: Request, res: Response) {
+  const userId = (req as any).userId as number
+  const user = await authService.completeOnboarding(userId, req.body)
+  res.json(user)
 }

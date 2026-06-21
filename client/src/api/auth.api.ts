@@ -18,6 +18,9 @@ export interface User {
   firstName: string
   lastName: string
   isAdmin?: boolean
+  onboardingCompleted?: boolean
+  level?: string
+  weeklyHoursAvailable?: number
 }
 
 export interface AuthResponse {
@@ -43,4 +46,6 @@ export const authApi = {
   me: () => api.get<User>('/auth/me'),
   forgotPassword: (data: ForgotPasswordData) => api.post('/auth/forgot-password', data),
   resetPassword: (data: ResetPasswordData) => api.post('/auth/reset-password', data),
+  completeOnboarding: (data: { level: string; weeklyHoursAvailable: number; sports?: string[] }) =>
+    api.patch<User>('/auth/onboarding', data),
 }

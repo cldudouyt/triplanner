@@ -4,36 +4,33 @@ import {
   LayoutDashboard,
   ClipboardList,
   Calendar,
+  CalendarClock,
   Trophy,
   BarChart3,
   Users,
   MessageSquare,
-  Settings,
   LogOut,
   X,
   Shield,
-  Sun,
-  Moon,
   Menu,
-  User,
   ArrowRightFromLine,
 } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '@/context/AuthContext'
-import { useTheme } from '@/context/ThemeContext'
 import { messagesApi } from '@/api/messages.api'
 import { competitionsApi } from '@/api/competitions.api'
 import { trainingPlansApi } from '@/api/trainingPlans.api'
 
-// ─── Nav items ────────────────────────────────────────────────────────────────
+// ─── Nav items athlète ────────────────────────────────────────────────────────
 
 const navLinks = [
-  { to: '/', icon: LayoutDashboard, label: 'Tableau de bord', end: true },
+  { to: '/dashboard', icon: LayoutDashboard, label: 'Tableau de bord', end: false },
   { to: '/training', icon: ClipboardList, label: 'Mon plan', end: false },
+  { to: '/seances-club', icon: CalendarClock, label: 'Séances club', end: false },
   { to: '/calendar', icon: Calendar, label: 'Calendrier', end: false },
   { to: '/competitions', icon: Trophy, label: 'Compétitions', end: false },
   { to: '/statistics', icon: BarChart3, label: 'Statistiques', end: false },
-  { to: '/club', icon: Users, label: 'Espace club · IA', end: false },
+  { to: '/annuaire', icon: Users, label: 'Annuaire du club', end: false },
 ]
 
 // ─── Pill NavItem ─────────────────────────────────────────────────────────────
@@ -92,7 +89,7 @@ function NavItem({ to, icon: Icon, label, end = false, badge, onClick }: NavItem
   )
 }
 
-// ─── Competion A widget ───────────────────────────────────────────────────────
+// ─── Widget compétition A ─────────────────────────────────────────────────────
 
 interface CompetitionWidgetProps {
   name: string
@@ -153,12 +150,11 @@ export function SidebarMobileToggle({ onOpen }: MobileToggleProps) {
   )
 }
 
-// ─── Sidebar principale ───────────────────────────────────────────────────────
+// ─── Sidebar principale (athlète) ─────────────────────────────────────────────
 
 export default function Sidebar() {
   const [isOpen, setIsOpen] = useState(false)
   const { user, logout } = useAuth()
-  const { resolvedTheme, toggleTheme } = useTheme()
 
   const { data: unreadData } = useQuery({
     queryKey: ['messages-unread'],
@@ -180,10 +176,8 @@ export default function Sidebar() {
     queryFn: () => trainingPlansApi.list().then(r => r.data),
   })
 
-  // Next upcoming competition priority A
   const nextCompA = competitionsData?.data?.find(c => new Date(c.date) >= new Date()) ?? null
 
-  // Active plan week progress
   const plans = plansData?.data ?? []
   const activePlan =
     plans.find(p => p.startDate && (!p.endDate || new Date(p.endDate) >= new Date())) ??
@@ -210,7 +204,6 @@ export default function Sidebar() {
 
   return (
     <>
-      {/* Mobile overlay */}
       {isOpen && (
         <div
           className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 lg:hidden animate-fade-in"
@@ -218,7 +211,6 @@ export default function Sidebar() {
         />
       )}
 
-      {/* Hamburger button (mobile only) */}
       <button
         onClick={() => setIsOpen(true)}
         className="fixed top-3 left-3 z-30 lg:hidden p-2 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors shadow-sm"
@@ -227,7 +219,6 @@ export default function Sidebar() {
         <Menu className="w-5 h-5 text-gray-600 dark:text-gray-400" />
       </button>
 
-      {/* Sidebar */}
       <aside
         className={`
           fixed lg:sticky top-0 left-0 z-50 h-screen w-[230px] flex-none
@@ -274,7 +265,7 @@ export default function Sidebar() {
             onClick={handleNavClick}
           />
 
-          {/* Admin */}
+          {/* Admin CODIR */}
           {user?.isAdmin && (
             <NavLink
               to="/admin"
@@ -307,111 +298,29 @@ export default function Sidebar() {
         )}
 
         {/* Footer */}
-        <div className="px-2 pb-3 pt-2 border-t border-gray-100 dark:border-slate-800 space-y-0.5">
-          {/* Theme toggle */}
-          <button
-            onClick={toggleTheme}
-            className="flex items-center gap-3 w-full px-3 py-2 rounded-xl text-sm text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-800 hover:text-gray-700 dark:hover:text-gray-300 transition-all"
-          >
-            {resolvedTheme === 'dark' ? (
-              <>
-                <span className="w-[30px] h-[30px] flex-none rounded-[9px] bg-gray-100 dark:bg-slate-800 flex items-center justify-center">
-                  <Sun className="h-4 w-4 text-gray-400" />
-                </span>
-                Mode clair
-              </>
-            ) : (
-              <>
-                <span className="w-[30px] h-[30px] flex-none rounded-[9px] bg-gray-100 dark:bg-slate-800 flex items-center justify-center">
-                  <Moon className="h-4 w-4 text-gray-400" />
-                </span>
-                Mode sombre
-              </>
-            )}
-          </button>
-
-          {/* Profile */}
-          <NavLink
-            to="/profil"
-            onClick={handleNavClick}
-            className={({ isActive }) =>
-              `flex items-center gap-3 px-3 py-2 rounded-xl text-sm transition-all ${
-                isActive
-                  ? 'bg-orange-50 dark:bg-orange-900/20'
-                  : 'hover:bg-gray-50 dark:hover:bg-slate-800'
-              }`
-            }
-          >
-            {({ isActive }) => (
-              <>
-                <span
-                  className={`w-[30px] h-[30px] flex-none rounded-[9px] flex items-center justify-center transition-all ${
-                    isActive
-                      ? 'bg-gradient-to-br from-orange-400 to-orange-600 text-white shadow-md shadow-orange-600/30'
-                      : 'bg-gray-100 dark:bg-slate-800 text-gray-400 dark:text-gray-500'
-                  }`}
-                >
-                  <User className="h-4 w-4" />
-                </span>
-                <span
-                  className={`flex-1 ${
-                    isActive
-                      ? 'font-medium text-gray-900 dark:text-gray-100'
-                      : 'text-gray-500 dark:text-gray-400'
-                  }`}
-                >
-                  Mon profil
-                </span>
-              </>
-            )}
-          </NavLink>
-
-          {/* Settings */}
-          <NavLink
-            to="/settings"
-            onClick={handleNavClick}
-            className={({ isActive }) =>
-              `flex items-center gap-3 px-3 py-2 rounded-xl text-sm transition-all ${
-                isActive
-                  ? 'bg-orange-50 dark:bg-orange-900/20'
-                  : 'hover:bg-gray-50 dark:hover:bg-slate-800'
-              }`
-            }
-          >
-            {({ isActive }) => (
-              <>
-                <span
-                  className={`w-[30px] h-[30px] flex-none rounded-[9px] flex items-center justify-center transition-all ${
-                    isActive
-                      ? 'bg-gradient-to-br from-orange-400 to-orange-600 text-white shadow-md shadow-orange-600/30'
-                      : 'bg-gray-100 dark:bg-slate-800 text-gray-400 dark:text-gray-500'
-                  }`}
-                >
-                  <Settings className="h-4 w-4" />
-                </span>
-                <span
-                  className={`flex-1 ${
-                    isActive
-                      ? 'font-medium text-gray-900 dark:text-gray-100'
-                      : 'text-gray-500 dark:text-gray-400'
-                  }`}
-                >
-                  Paramètres
-                </span>
-              </>
-            )}
-          </NavLink>
-
-          {/* Logout */}
-          <button
-            onClick={logout}
-            className="flex items-center gap-3 w-full px-3 py-2 rounded-xl text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all"
-          >
-            <span className="w-[30px] h-[30px] flex-none rounded-[9px] bg-red-50 dark:bg-red-900/20 flex items-center justify-center">
-              <LogOut className="h-4 w-4" />
-            </span>
-            Déconnexion
-          </button>
+        <div className="px-3 pb-3 pt-2 border-t border-gray-100 dark:border-slate-800">
+          <div className="flex items-center gap-2.5 px-2 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors">
+            <div
+              className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-none"
+              style={{ background: 'linear-gradient(135deg,#FB923C,#EA580C)' }}
+            >
+              {user?.firstName?.[0] ?? ''}{user?.lastName?.[0] ?? ''}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate leading-tight">
+                {user?.firstName} {user?.lastName}
+              </p>
+              <p className="text-xs text-gray-400 leading-tight">Athlète · TCN</p>
+            </div>
+            <button
+              onClick={logout}
+              aria-label="Se déconnecter"
+              className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors flex-none"
+              title="Se déconnecter"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
+          </div>
         </div>
       </aside>
     </>
@@ -430,8 +339,8 @@ export function SidebarCoach() {
     { to: '/club/coach', icon: LayoutDashboard, label: 'Tableau de bord club', end: true },
     { to: '/club/coach/groupes', icon: Users, label: 'Groupes', end: false },
     { to: '/club/coach/plans', icon: ClipboardList, label: "Plans d'entraînement", end: false },
+    { to: '/club/coach/seances', icon: CalendarClock, label: 'Séances club', end: false },
     { to: '/club/coach/calendrier', icon: Calendar, label: 'Calendrier', end: false },
-    { to: '/messages', icon: MessageSquare, label: 'Messages', end: false },
   ]
 
   const handleNavClick = () => {
@@ -448,14 +357,14 @@ export function SidebarCoach() {
       )}
       <button
         onClick={() => setIsOpen(true)}
-        className="fixed top-3 left-3 z-30 lg:hidden p-2 rounded-xl bg-white border border-gray-200 hover:bg-gray-50 transition-colors shadow-sm"
+        className="fixed top-3 left-3 z-30 lg:hidden p-2 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors shadow-sm"
         aria-label="Ouvrir le menu"
       >
-        <Menu className="w-5 h-5 text-gray-600" />
+        <Menu className="w-5 h-5 text-gray-600 dark:text-gray-400" />
       </button>
 
       <aside
-        className={`fixed lg:sticky top-0 left-0 z-50 h-screen w-[230px] flex-none bg-white border-r border-gray-100 flex flex-col transform transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}
+        className={`fixed lg:sticky top-0 left-0 z-50 h-screen w-[230px] flex-none bg-white dark:bg-slate-900 border-r border-gray-100 dark:border-slate-800 flex flex-col transform transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}
       >
         <div className="px-4 pt-4 pb-3">
           <div className="flex items-center gap-3">
@@ -463,11 +372,11 @@ export function SidebarCoach() {
               M
             </div>
             <div className="min-w-0">
-              <p className="text-sm font-bold text-gray-900 leading-tight">Tri Planner</p>
+              <p className="text-sm font-bold text-gray-900 dark:text-gray-100 leading-tight">Tri Planner</p>
               <p className="text-xs text-gray-400 leading-tight truncate">Espace coach · TCN</p>
             </div>
-            <button onClick={() => setIsOpen(false)} aria-label="Fermer" className="lg:hidden p-1.5 rounded-lg hover:bg-gray-100 transition-colors ml-auto">
-              <X className="w-4 h-4 text-gray-500" />
+            <button onClick={() => setIsOpen(false)} aria-label="Fermer" className="lg:hidden p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors ml-auto">
+              <X className="w-4 h-4 text-gray-500 dark:text-gray-400" />
             </button>
           </div>
         </div>
@@ -481,29 +390,32 @@ export function SidebarCoach() {
                 to={to}
                 end={end}
                 onClick={handleNavClick}
-                className={`flex items-center gap-3 px-3 py-2 rounded-xl text-sm transition-all ${isActive ? 'bg-orange-50' : 'hover:bg-gray-50'}`}
+                className={`flex items-center gap-3 px-3 py-2 rounded-xl text-sm transition-all ${isActive ? 'bg-orange-50 dark:bg-orange-900/20' : 'hover:bg-gray-50 dark:hover:bg-slate-800'}`}
               >
-                <span className={`w-[30px] h-[30px] flex-none rounded-[9px] flex items-center justify-center transition-all ${isActive ? 'bg-gradient-to-br from-orange-400 to-orange-600 text-white shadow-md shadow-orange-600/30' : 'bg-gray-100 text-gray-400'}`}>
+                <span className={`w-[30px] h-[30px] flex-none rounded-[9px] flex items-center justify-center transition-all ${isActive ? 'bg-gradient-to-br from-orange-400 to-orange-600 text-white shadow-md shadow-orange-600/30' : 'bg-gray-100 dark:bg-slate-800 text-gray-400 dark:text-gray-500'}`}>
                   <Icon className="h-4 w-4" />
                 </span>
-                <span className={`flex-1 ${isActive ? 'font-medium text-gray-900' : 'text-gray-500'}`}>{label}</span>
+                <span className={`flex-1 ${isActive ? 'font-medium text-gray-900 dark:text-gray-100' : 'text-gray-500 dark:text-gray-400'}`}>{label}</span>
               </NavLink>
             )
           })}
         </nav>
 
-        <div className="px-3 pb-4 pt-2 border-t border-gray-100">
-          <div className="flex items-center gap-3 px-2 py-2 rounded-xl hover:bg-gray-50 transition-colors">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center text-white text-xs font-bold flex-none">
-              TM
+        <div className="px-3 pb-4 pt-2 border-t border-gray-100 dark:border-slate-800">
+          <div className="flex items-center gap-3 px-2 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors">
+            <div
+              className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-none"
+              style={{ background: 'linear-gradient(135deg,#FB923C,#EA580C)' }}
+            >
+              {user?.firstName?.[0] ?? ''}{user?.lastName?.[0] ?? ''}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-gray-900 truncate">{user?.firstName} {user?.lastName}</p>
+              <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">{user?.firstName} {user?.lastName}</p>
               <p className="text-xs text-gray-400">Coach · TCN</p>
             </div>
             <button
-              onClick={() => navigate('/')}
-              className="p-1.5 rounded-lg bg-gray-100 text-gray-400 hover:bg-gray-200 transition-colors flex-none"
+              onClick={() => navigate('/dashboard')}
+              className="p-1.5 rounded-lg bg-gray-100 dark:bg-slate-800 text-gray-400 dark:text-gray-500 hover:bg-gray-200 dark:hover:bg-slate-700 transition-colors flex-none"
               title="Retour à l'espace athlète"
             >
               <ArrowRightFromLine className="w-4 h-4" />
@@ -515,12 +427,11 @@ export function SidebarCoach() {
   )
 }
 
-// ─── Sidebar Athlète ──────────────────────────────────────────────────────────
+// ─── Sidebar Athlète (vue aperçu dans espace coach) ──────────────────────────
 
 const athleteNavLinks = [
-  { to: '/', icon: LayoutDashboard, label: 'Tableau de bord', end: true },
-  { to: '/club/coach', icon: Users, label: 'Mes coéquipiers', end: false },
-  { to: '/club/athlete', icon: ClipboardList, label: 'Mon plan', end: true },
+  { to: '/dashboard', icon: LayoutDashboard, label: 'Tableau de bord', end: false },
+  { to: '/training', icon: ClipboardList, label: 'Mon plan', end: false },
   { to: '/calendar', icon: Calendar, label: 'Calendrier', end: false },
   { to: '/competitions', icon: Trophy, label: 'Compétitions', end: false },
   { to: '/messages', icon: MessageSquare, label: 'Messages', end: false },
@@ -559,7 +470,6 @@ export function SidebarAthlete() {
           ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
         `}
       >
-        {/* Logo */}
         <div className="px-4 pt-4 pb-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -581,15 +491,6 @@ export function SidebarAthlete() {
           </div>
         </div>
 
-        {/* Mode Athlète badge */}
-        <div className="px-3 pb-3">
-          <div className="flex items-center gap-2 bg-gray-50 dark:bg-slate-800 rounded-xl px-3 py-2">
-            <span className="w-2 h-2 rounded-full bg-gray-400 flex-none" />
-            <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">Mode Athlète</span>
-          </div>
-        </div>
-
-        {/* Navigation */}
         <nav className="flex-1 px-2 py-1 space-y-0.5 overflow-y-auto">
           {athleteNavLinks.map(({ to, icon: Icon, label, end }) => (
             <NavLink

@@ -1,0 +1,8 @@
+**/node_modules
+**/.git
+**/*.log
+**/.env
+**/.env.local
+client/.next
+server/dev.db
+server/*.db

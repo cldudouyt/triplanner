@@ -1,141 +1,85 @@
-import { useState } from 'react'
-import { NavLink, Outlet, Link } from 'react-router-dom'
-import {
-  LayoutDashboard,
-  Users,
-  FileText,
-  Activity,
-  ArrowLeft,
-  Menu,
-  X,
-  Shield
-} from 'lucide-react'
-import clsx from 'clsx'
+import { Outlet, useNavigate, useLocation } from 'react-router-dom'
+import { LayoutDashboard, ShieldCheck, Mail, ArrowRightFromLine } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 
-const adminNav = [
-  { to: '/admin', icon: LayoutDashboard, label: 'Dashboard', end: true },
-  { to: '/admin/users', icon: Users, label: 'Utilisateurs' },
-  { to: '/admin/content', icon: FileText, label: 'Contenu' },
-  { to: '/admin/logs', icon: Activity, label: 'Activité' },
+const NAV_ITEMS = [
+  { path: '/admin', label: 'Tableau de bord', icon: LayoutDashboard, end: true },
+  { path: '/admin/membres', label: 'Membres & droits', icon: ShieldCheck },
+  { path: '/admin/invitations', label: 'Invitations', icon: Mail, badge: 2 },
 ]
 
 export default function AdminLayout() {
   const { user } = useAuth()
-  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const navigate = useNavigate()
+  const location = useLocation()
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Mobile header */}
-      <header className="lg:hidden fixed top-0 left-0 right-0 z-40 bg-white border-b border-gray-200">
-        <div className="flex items-center justify-between px-4 h-16">
-          <button
-            onClick={() => setSidebarOpen(true)}
-            className="p-2 rounded-lg hover:bg-gray-100"
-          >
-            <Menu className="w-5 h-5 text-gray-600" />
-          </button>
-          <div className="flex items-center gap-2">
-            <Shield className="w-5 h-5 text-amber-500" />
-            <span className="font-semibold text-gray-900">Admin</span>
-          </div>
-          <Link
-            to="/"
-            className="p-2 rounded-lg hover:bg-gray-100"
-          >
-            <ArrowLeft className="w-5 h-5 text-gray-600" />
-          </Link>
-        </div>
-      </header>
-
-      {/* Mobile sidebar overlay */}
-      {sidebarOpen && (
-        <div
-          className="lg:hidden fixed inset-0 z-40 bg-black/50 backdrop-blur-sm"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
-
+    <div className="flex min-h-screen bg-gray-50 dark:bg-slate-900">
       {/* Sidebar */}
-      <aside
-        className={clsx(
-          'fixed top-0 left-0 z-50 h-full w-64 bg-white border-r border-gray-200',
-          'transform transition-transform duration-300 ease-in-out',
-          'lg:translate-x-0',
-          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        )}
-      >
-        <div className="flex flex-col h-full">
-          {/* Header */}
-          <div className="flex items-center justify-between px-4 h-16 border-b border-gray-200">
-            <div className="flex items-center gap-2">
-              <div className="p-1.5 rounded-lg bg-amber-100">
-                <Shield className="w-5 h-5 text-amber-600" />
-              </div>
-              <span className="font-bold text-gray-900">Administration</span>
+      <div className="w-60 flex-none flex flex-col bg-white dark:bg-slate-900 border-r border-gray-200 dark:border-slate-800 min-h-screen">
+        {/* Logo */}
+        <div className="px-4 py-5 border-b border-gray-100 dark:border-slate-800">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'linear-gradient(135deg,#8B5CF6,#7C3AED)' }}>
+              <span className="text-white font-black text-sm">M</span>
             </div>
-            <button
-              onClick={() => setSidebarOpen(false)}
-              className="lg:hidden p-2 rounded-lg hover:bg-gray-100"
-            >
-              <X className="w-5 h-5 text-gray-600" />
+            <div>
+              <div className="font-bold text-gray-900 dark:text-gray-100 text-sm leading-tight">Tri Planner</div>
+              <div className="text-[10px] text-gray-400 font-medium">Administration · CODIR</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Nav */}
+        <nav className="flex-1 px-3 py-3 space-y-1">
+          {NAV_ITEMS.map(item => {
+            const isActive = item.end ? location.pathname === item.path : location.pathname.startsWith(item.path)
+            return (
+              <button key={item.path} onClick={() => navigate(item.path)}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all text-left ${
+                  isActive
+                    ? 'bg-violet-50 dark:bg-violet-900/20'
+                    : 'hover:bg-gray-50 dark:hover:bg-slate-800'
+                }`}>
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-none ${
+                  isActive ? 'bg-violet-600 text-white' : 'bg-gray-100 dark:bg-slate-800 text-gray-400'
+                }`}>
+                  <item.icon className="w-4 h-4" />
+                </div>
+                <span className={`text-sm flex-1 ${isActive ? 'font-medium text-gray-900 dark:text-gray-100' : 'text-gray-500 dark:text-gray-400'}`}>
+                  {item.label}
+                </span>
+                {item.badge && item.badge > 0 && (
+                  <span className="px-1.5 py-0.5 text-[10px] font-bold rounded-full bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300">
+                    {item.badge}
+                  </span>
+                )}
+              </button>
+            )
+          })}
+        </nav>
+
+        {/* Footer */}
+        <div className="px-3 pb-4 border-t border-gray-100 dark:border-slate-800 pt-3">
+          <div className="flex items-center gap-3 p-2 rounded-xl hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors">
+            <div className="w-9 h-9 rounded-full flex items-center justify-center text-white font-bold text-sm flex-none"
+              style={{ background: 'linear-gradient(135deg,#8B5CF6,#7C3AED)' }}>
+              {user?.firstName?.[0]}{user?.lastName?.[0]}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">{user?.firstName} {user?.lastName}</div>
+              <div className="text-xs text-gray-400">Admin · Présidente</div>
+            </div>
+            <button onClick={() => navigate('/dashboard')} className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors text-gray-400">
+              <ArrowRightFromLine className="w-4 h-4" />
             </button>
           </div>
-
-          {/* Navigation */}
-          <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-            {adminNav.map(({ to, icon: Icon, label, end }) => (
-              <NavLink
-                key={to}
-                to={to}
-                end={end}
-                onClick={() => setSidebarOpen(false)}
-                className={({ isActive }) =>
-                  clsx(
-                    'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200',
-                    isActive
-                      ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg shadow-amber-500/30'
-                      : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-                  )
-                }
-              >
-                <Icon className="w-5 h-5" />
-                {label}
-              </NavLink>
-            ))}
-          </nav>
-
-          {/* Back to app */}
-          <div className="p-4 border-t border-gray-200">
-            <Link
-              to="/"
-              className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"
-            >
-              <ArrowLeft className="w-5 h-5" />
-              Retour à l'application
-            </Link>
-          </div>
-
-          {/* User info */}
-          <div className="p-4 border-t border-gray-200">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center text-white font-medium">
-                {user?.firstName?.[0]}{user?.lastName?.[0]}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-900 truncate">
-                  {user?.firstName} {user?.lastName}
-                </p>
-                <p className="text-xs text-amber-600">Administrateur</p>
-              </div>
-            </div>
-          </div>
         </div>
-      </aside>
+      </div>
 
       {/* Main content */}
-      <main className="lg:ml-64 pt-16 lg:pt-0 min-h-screen">
-        <div className="p-4 lg:p-8">
+      <main className="flex-1 min-h-screen">
+        <div className="p-6 lg:p-8">
           <Outlet />
         </div>
       </main>

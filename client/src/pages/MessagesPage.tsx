@@ -2,7 +2,8 @@ import { useState, useRef, useEffect } from 'react'
 import { Search, Bell, Send, MessageSquare, Plus } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/context/AuthContext'
-import { messagesApi, type MessageThread } from '@/api/messages.api'
+import { messagesApi, type MessageThread, type Message } from '@/api/messages.api'
+import { useMessagesSocket } from '@/hooks/useMessagesSocket'
 
 // Avatar gradient déterministe basé sur la première lettre du prénom
 function getAvatarGradient(name: string): string {
@@ -37,7 +38,8 @@ export default function MessagesPage() {
   const { data: threads } = useQuery({
     queryKey: ['threads'],
     queryFn: () => messagesApi.getThreads().then(r => r.data).catch(() => []),
-    refetchInterval: 10000,
+    refetchInterval: 30000,
+    staleTime: 10000,
   })
 
   const { data: messages } = useQuery({
@@ -47,24 +49,54 @@ export default function MessagesPage() {
         ? messagesApi.getMessages(selected.id).then(r => r.data)
         : Promise.resolve([]),
     enabled: !!selected,
-    refetchInterval: 5000,
+    staleTime: 30000,
+    // No refetchInterval — WebSocket handles real-time updates
+  })
+
+  // WebSocket for real-time messaging
+  const { sendMessage: wsSendMessage, markRead: wsMarkRead } = useMessagesSocket((newMsg) => {
+    // Append the incoming message to the active thread's cache
+    if (newMsg.threadId === selected?.id) {
+      qc.setQueryData<Message[]>(['messages', newMsg.threadId], (old = []) => [
+        ...old,
+        {
+          id: newMsg.id,
+          threadId: newMsg.threadId,
+          senderId: newMsg.senderId,
+          content: newMsg.content,
+          createdAt: newMsg.createdAt,
+          isRead: false,
+        },
+      ])
+    }
+    // Refresh thread list preview (last message, unread count)
+    qc.invalidateQueries({ queryKey: ['threads'] })
   })
 
   const sendMutation = useMutation({
     mutationFn: (content: string) => messagesApi.sendMessage(selected!.id, { content }),
     onSuccess: () => {
-      setInputMsg('')
       qc.invalidateQueries({ queryKey: ['messages', selected?.id] })
       qc.invalidateQueries({ queryKey: ['threads'] })
     },
   })
 
   const markAsRead = (threadId: number) => {
+    // Use WebSocket first, fallback to REST
+    wsMarkRead(threadId)
     messagesApi.markAsRead(threadId).catch(() => {})
   }
 
-  const handleSend = () => {
-    if (inputMsg.trim() && selected) sendMutation.mutate(inputMsg.trim())
+  const handleSend = async () => {
+    if (!inputMsg.trim() || !selected) return
+    const content = inputMsg.trim()
+    setInputMsg('')
+
+    // Try WebSocket first; fall back to REST if socket not open
+    const sent = wsSendMessage(selected.id, content)
+    if (!sent) {
+      await sendMutation.mutateAsync(content)
+    }
   }
 
   useEffect(() => {

@@ -6,6 +6,7 @@ import cookieParser from 'cookie-parser'
 import rateLimit from 'express-rate-limit'
 import logger from './utils/logger.js'
 import { errorHandler } from './middleware/errorHandler.js'
+import prisma from './config/database.js'
 import authRoutes from './modules/auth/auth.routes.js'
 import competitionRoutes from './modules/competitions/competition.routes.js'
 import planRoutes from './modules/training-plans/plan.routes.js'
@@ -22,6 +23,7 @@ import achievementsRoutes from './modules/achievements/achievements.routes.js'
 import notificationsRoutes from './modules/notifications/notifications.routes.js'
 import goalsRoutes from './modules/goals/goals.routes.js'
 import clubRoutes from './modules/club/club.routes.js'
+import clubSessionsRoutes from './modules/club-sessions/club-sessions.routes.js'
 import messagesRoutes from './modules/messages/messages.routes.js'
 import groupsRoutes from './modules/groups/groups.routes.js'
 
@@ -47,19 +49,23 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'"], // Tailwind inline styles
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       scriptSrc: ["'self'"],
       imgSrc: ["'self'", "data:", "https:"],
-      connectSrc: ["'self'"],
-      fontSrc: ["'self'", "https:", "data:"],
+      connectSrc: ["'self'", "wss:", "ws:"],
+      fontSrc: ["'self'", "https:", "data:", "https://fonts.gstatic.com"],
       objectSrc: ["'none'"],
       upgradeInsecureRequests: [],
     },
   },
   crossOriginEmbedderPolicy: false, // Allow cross-origin resources (Strava images)
 }))
+const allowedOrigins = (process.env.CORS_ORIGIN ?? 'http://localhost:5173').split(',').map(o => o.trim())
 app.use(cors({
-  origin: 'http://localhost:5173',
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) return callback(null, true)
+    callback(new Error('Not allowed by CORS'))
+  },
   credentials: true,
 }))
 app.use(pinoHttp({ logger, autoLogging: { ignore: (req) => req.url === '/api/health' } }))
@@ -85,12 +91,31 @@ app.use('/api/v1/achievements', achievementsRoutes)
 app.use('/api/v1/notifications', notificationsRoutes)
 app.use('/api/v1/goals', goalsRoutes)
 app.use('/api/v1/club', clubRoutes)
+app.use('/api/v1/club-sessions', clubSessionsRoutes)
 app.use('/api/v1/messages', messagesRoutes)
 app.use('/api/v1/groups', groupsRoutes)
 
+const startTime = Date.now()
+
 // Health check
-app.get('/api/health', (_req, res) => {
-  res.json({ status: 'ok' })
+app.get('/api/health', async (_req, res) => {
+  try {
+    // Test DB connection with a lightweight query
+    await prisma.$queryRaw`SELECT 1`
+    res.json({
+      status: 'ok',
+      version: process.env.npm_package_version ?? '1.0.0',
+      uptime: Math.round((Date.now() - startTime) / 1000),
+      db: 'connected',
+      timestamp: new Date().toISOString(),
+    })
+  } catch {
+    res.status(503).json({
+      status: 'degraded',
+      db: 'disconnected',
+      timestamp: new Date().toISOString(),
+    })
+  }
 })
 
 app.use(errorHandler)

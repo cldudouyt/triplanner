@@ -1,10 +1,10 @@
 import 'dotenv/config'
-import { PrismaClient } from '../generated/prisma/client.js'
-import { PrismaBetterSqlite3 } from '@prisma/adapter-better-sqlite3'
+import { PrismaClient } from '../generated/prisma/index.js'
+import { PrismaPg } from '@prisma/adapter-pg'
 import { hashPassword } from '../src/utils/password.js'
 import { generateSessionsForPlan } from '../src/modules/training-plans/session-generator.js'
 
-const adapter = new PrismaBetterSqlite3({ url: process.env.DATABASE_URL! })
+const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! })
 const prisma = new PrismaClient({ adapter })
 
 async function main() {
@@ -26,17 +26,19 @@ async function main() {
   const password = await hashPassword('demo1234')
   const coachPassword = await hashPassword('coach1234')
   const athletePassword = await hashPassword('athlete1234')
+  const adminPassword = await hashPassword('admin1234')
 
   // Utilisateur démo principal : Léa Fontaine
   const lea = await prisma.user.upsert({
     where: { email: 'demo@triathlon-planner.fr' },
-    update: { firstName: 'Léa', lastName: 'Fontaine' },
+    update: { firstName: 'Léa', lastName: 'Fontaine', onboardingCompleted: true },
     create: {
       email: 'demo@triathlon-planner.fr',
       password,
       firstName: 'Léa',
       lastName: 'Fontaine',
       isAdmin: false,
+      onboardingCompleted: true,
     },
   })
   console.log(`Utilisateur démo créé : ${lea.email} / demo1234 (id=${lea.id})`)
@@ -44,13 +46,14 @@ async function main() {
   // Coach : Thomas Mercier
   const thomas = await prisma.user.upsert({
     where: { email: 'thomas.mercier@triathlon-nantes.fr' },
-    update: {},
+    update: { onboardingCompleted: true },
     create: {
       email: 'thomas.mercier@triathlon-nantes.fr',
       password: coachPassword,
       firstName: 'Thomas',
       lastName: 'Mercier',
       isAdmin: false,
+      onboardingCompleted: true,
     },
   })
 
@@ -64,34 +67,51 @@ async function main() {
       firstName: 'Marc',
       lastName: 'Petit',
       isAdmin: false,
+      onboardingCompleted: true,
     },
   })
 
   const sofia = await prisma.user.upsert({
     where: { email: 'sofia.adler@triathlon-nantes.fr' },
-    update: {},
+    update: { onboardingCompleted: true },
     create: {
       email: 'sofia.adler@triathlon-nantes.fr',
       password: athletePassword,
       firstName: 'Sofia',
       lastName: 'Adler',
       isAdmin: false,
+      onboardingCompleted: true,
     },
   })
 
   const julie = await prisma.user.upsert({
     where: { email: 'julie.bernard@triathlon-nantes.fr' },
-    update: {},
+    update: { onboardingCompleted: true },
     create: {
       email: 'julie.bernard@triathlon-nantes.fr',
       password: athletePassword,
       firstName: 'Julie',
       lastName: 'B.',
       isAdmin: false,
+      onboardingCompleted: true,
     },
   })
 
-  console.log('5 utilisateurs créés (Léa, Thomas, Marc, Sofia, Julie)')
+  // Admin CODIR : Marie Lemoine
+  const marie = await prisma.user.upsert({
+    where: { email: 'marie.lemoine@triathlon-nantes.fr' },
+    update: { onboardingCompleted: true },
+    create: {
+      email: 'marie.lemoine@triathlon-nantes.fr',
+      password: adminPassword,
+      firstName: 'Marie',
+      lastName: 'Lemoine',
+      isAdmin: true,
+      onboardingCompleted: true,
+    },
+  })
+
+  console.log('6 utilisateurs créés (Léa, Thomas, Marc, Sofia, Julie, Marie)')
 
   // =====================================================
   // 2. Préférences de notification
@@ -110,21 +130,22 @@ async function main() {
   // =====================================================
   // 3. Club : Triathlon Club Nantais
   // =====================================================
-  await prisma.clubMember.deleteMany({ where: { userId: { in: [lea.id, thomas.id, marc.id, sofia.id, julie.id] } } })
+  await prisma.clubMember.deleteMany({ where: { userId: { in: [lea.id, thomas.id, marc.id, sofia.id, julie.id, marie.id] } } })
 
   const existingClub = await prisma.club.findFirst({ where: { name: 'Triathlon Club Nantais' } })
   const club = existingClub ?? await prisma.club.create({ data: { name: 'Triathlon Club Nantais' } })
 
   await prisma.clubMember.createMany({
     data: [
+      { clubId: club.id, userId: marie.id, role: 'admin' },
       { clubId: club.id, userId: thomas.id, role: 'coach' },
       { clubId: club.id, userId: lea.id, role: 'athlete' },
       { clubId: club.id, userId: marc.id, role: 'athlete' },
       { clubId: club.id, userId: sofia.id, role: 'athlete' },
-      { clubId: club.id, userId: julie.id, role: 'prépa' },
+      { clubId: club.id, userId: julie.id, role: 'athlete' },
     ],
   })
-  console.log('Club "Triathlon Club Nantais" créé avec 5 membres')
+  console.log('Club "Triathlon Club Nantais" créé avec 6 membres (Marie=admin, Thomas=coach)')
 
   // =====================================================
   // 3b. Athlètes supplémentaires pour les groupes
@@ -146,7 +167,7 @@ async function main() {
       prisma.user.upsert({
         where: { email: u.email },
         update: {},
-        create: { email: u.email, password: athletePassword, firstName: u.firstName, lastName: u.lastName, isAdmin: false },
+        create: { email: u.email, password: athletePassword, firstName: u.firstName, lastName: u.lastName, isAdmin: false, onboardingCompleted: true },
       }),
     ),
   )
@@ -707,7 +728,108 @@ async function main() {
   console.log('3 threads de messages créés')
 
   // =====================================================
-  // 10. Objectifs de saison
+  // 10. Séances du club (ClubSessions)
+  // =====================================================
+  await prisma.clubSessionRegistration.deleteMany({ where: { session: { clubId: club.id } } })
+  await prisma.clubSession.deleteMany({ where: { clubId: club.id } })
+
+  // Dates dynamiques : prochains créneaux
+  function nextWeekday(targetDay: number): Date {
+    const d = new Date(now)
+    d.setHours(0, 0, 0, 0)
+    const current = d.getDay() // 0=Sun, 1=Mon, ...
+    const diff = (targetDay - current + 7) % 7 || 7
+    d.setDate(d.getDate() + diff)
+    return d
+  }
+
+  const nextTuesday  = nextWeekday(2)
+  const nextThursday = nextWeekday(4)
+  const nextSunday   = nextWeekday(0)
+
+  const swimTuesday = await prisma.clubSession.create({
+    data: {
+      clubId: club.id, coachId: thomas.id,
+      title: 'Créneau natation · mardi soir', sport: 'swim',
+      date: nextTuesday, startTime: '19:00', endTime: '20:30',
+      location: 'Piscine du Petit Port · lignes 4-5', capacity: 16,
+    },
+  })
+  const swimThursday = await prisma.clubSession.create({
+    data: {
+      clubId: club.id, coachId: thomas.id,
+      title: 'Créneau natation · jeudi midi', sport: 'swim',
+      date: nextThursday, startTime: '12:30', endTime: '13:45',
+      location: 'Piscine Léo Lagrange · ligne 3', capacity: 8,
+    },
+  })
+  const bikeSunday = await prisma.clubSession.create({
+    data: {
+      clubId: club.id, coachId: thomas.id,
+      title: 'Sortie vélo du dimanche', sport: 'bike',
+      date: nextSunday, startTime: '08:00', endTime: '10:30',
+      location: 'Départ local TCN · 70 km', capacity: 20,
+    },
+  })
+  const runThursday = await prisma.clubSession.create({
+    data: {
+      clubId: club.id, coachId: thomas.id,
+      title: 'Piste · fractionné collectif', sport: 'run',
+      date: nextThursday, startTime: '18:30', endTime: '20:00',
+      location: 'Stade Mangin · piste', capacity: 15,
+    },
+  })
+
+  // Inscriptions (Léa inscrite à swim mardi + vélo dimanche)
+  await prisma.clubSessionRegistration.createMany({
+    data: [
+      { sessionId: swimTuesday.id,  userId: lea.id,    waitlist: false },
+      { sessionId: swimTuesday.id,  userId: marc.id,   waitlist: false },
+      { sessionId: swimTuesday.id,  userId: sofia.id,  waitlist: false },
+      { sessionId: swimTuesday.id,  userId: helene.id, waitlist: false },
+      { sessionId: swimThursday.id, userId: sofia.id,  waitlist: false },
+      { sessionId: swimThursday.id, userId: marc.id,   waitlist: false },
+      { sessionId: bikeSunday.id,   userId: lea.id,    waitlist: false },
+      { sessionId: bikeSunday.id,   userId: sofia.id,  waitlist: false },
+      { sessionId: bikeSunday.id,   userId: marc.id,   waitlist: false },
+      { sessionId: runThursday.id,  userId: sofia.id,  waitlist: false },
+      { sessionId: runThursday.id,  userId: yanis.id,  waitlist: false },
+    ],
+  })
+  console.log('4 séances club créées avec inscriptions')
+
+  // =====================================================
+  // 11. Invitations (Admin CODIR — Marie Lemoine)
+  // =====================================================
+  await prisma.invitation.deleteMany({ where: { clubId: club.id } })
+
+  const in7days = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
+  await prisma.invitation.createMany({
+    data: [
+      {
+        clubId: club.id, invitedById: marie.id,
+        email: 'camille.durand@email.fr', firstName: 'Camille', lastName: 'Durand',
+        role: 'athlete', groupName: 'Découverte', expiresAt: in7days,
+        createdAt: new Date(now.getTime() - 2 * 60 * 60 * 1000),
+      },
+      {
+        clubId: club.id, invitedById: marie.id,
+        email: 'noe.renaud@email.fr', firstName: 'Noé', lastName: 'Renaud',
+        role: 'athlete', groupName: null, expiresAt: in7days,
+        createdAt: new Date(now.getTime() - 24 * 60 * 60 * 1000),
+      },
+      {
+        clubId: club.id, invitedById: thomas.id,
+        email: 'hugo.masson@email.fr', firstName: 'Hugo', lastName: 'Masson',
+        role: 'coach', groupName: null, expiresAt: in7days,
+        createdAt: new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000),
+      },
+    ],
+  })
+  console.log('3 invitations CODIR créées (Camille, Noé, Hugo)')
+
+  // =====================================================
+  // 12. Objectifs de saison
   // =====================================================
   await prisma.seasonGoal.deleteMany({ where: { userId: lea.id } })
   await prisma.seasonGoal.createMany({
@@ -724,17 +846,21 @@ async function main() {
   // Résumé
   // =====================================================
   console.log('\n========================================')
-  console.log('COMPTE DÉMO PRÊT')
+  console.log('COMPTES DÉMO PRÊTS')
   console.log('========================================')
-  console.log('Email    : demo@triathlon-planner.fr')
-  console.log('Mot de passe : demo1234')
+  console.log('Athlète  : demo@triathlon-planner.fr / demo1234')
+  console.log('Coach    : thomas.mercier@triathlon-nantes.fr / coach1234')
+  console.log('Admin    : marie.lemoine@triathlon-nantes.fr / admin1234')
   console.log('')
   console.log('Contenu :')
-  console.log(`  - ${competitions.length} compétitions (2 passées, 3 futures)`)
+  console.log(`  - ${competitions.length} compétitions Léa (2 passées, 3 futures A/B/C)`)
   console.log('  - 3 plans (Triathlon Nantes sem.6/12, Natation, Vélo)')
   console.log('  - 1 suggestion coach envoyée (bannière orange visible)')
-  console.log('  - 3 threads de messages')
-  console.log('  - Club "Triathlon Club Nantais" (Thomas coach + 4 athlètes)')
+  console.log('  - 3 threads de messages (Direction + Groupes)')
+  console.log('  - Club "Triathlon Club Nantais" (Marie=admin, Thomas=coach, 14 athlètes)')
+  console.log('  - 4 groupes d\'entraînement avec athlètes')
+  console.log('  - 4 séances club (swim x2, bike, run) avec inscriptions')
+  console.log('  - 3 invitations CODIR en attente')
   console.log('  - Wellness 42j pour Léa, Marc, Sofia')
   console.log('========================================')
 }

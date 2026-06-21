@@ -306,3 +306,131 @@ export async function getSystemLogs() {
     recentRegistrations: recentUsers,
   }
 }
+
+// ─── Club CODIR Admin ──────────────────────────────────────────────────────────
+
+export async function getClubStats(adminId: number) {
+  const membership = await prisma.clubMember.findFirst({ where: { userId: adminId } })
+  if (!membership) throw new Error('Not a club member')
+
+  const [members, coaches, admins, pendingInvitations, recentActivity] = await Promise.all([
+    prisma.clubMember.count({ where: { clubId: membership.clubId, role: 'athlete' } }),
+    prisma.clubMember.count({ where: { clubId: membership.clubId, role: 'coach' } }),
+    prisma.clubMember.count({ where: { clubId: membership.clubId, role: 'admin' } }),
+    prisma.invitation.count({ where: { clubId: membership.clubId, status: 'pending' } }),
+    prisma.invitation.findMany({
+      where: { clubId: membership.clubId },
+      orderBy: { createdAt: 'desc' },
+      take: 10,
+      include: { invitedBy: { select: { firstName: true, lastName: true } } },
+    }),
+  ])
+
+  return { members, coaches, admins, pendingInvitations, recentActivity }
+}
+
+export async function getMembers(adminId: number, filter?: string) {
+  const membership = await prisma.clubMember.findFirst({ where: { userId: adminId } })
+  if (!membership) throw new Error('Not a club member')
+
+  const where: Record<string, unknown> = { clubId: membership.clubId }
+  if (filter === 'coaches') where.role = 'coach'
+  if (filter === 'admins') where.role = 'admin'
+
+  const members = await prisma.clubMember.findMany({
+    where,
+    include: {
+      user: {
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          email: true,
+          groupMemberships: { include: { group: { select: { name: true } } }, take: 1 },
+        },
+      },
+    },
+    orderBy: { createdAt: 'asc' },
+  })
+
+  return members.map(m => ({
+    id: m.userId,
+    firstName: m.user.firstName,
+    lastName: m.user.lastName,
+    email: m.user.email,
+    role: m.role,
+    group: m.user.groupMemberships[0]?.group?.name ?? null,
+    status: 'active',
+  }))
+}
+
+export async function updateMemberRole(adminId: number, targetUserId: number, role: string) {
+  const adminMembership = await prisma.clubMember.findFirst({ where: { userId: adminId, role: 'admin' } })
+  if (!adminMembership) throw new Error('Not an admin')
+
+  const targetMembership = await prisma.clubMember.findFirst({
+    where: { userId: targetUserId, clubId: adminMembership.clubId },
+  })
+  if (!targetMembership) throw new Error('Member not found')
+
+  return prisma.clubMember.update({
+    where: { id: targetMembership.id },
+    data: { role },
+  })
+}
+
+export async function createInvitation(adminId: number, data: {
+  email: string; firstName: string; lastName: string; role: string; groupName?: string
+}) {
+  const membership = await prisma.clubMember.findFirst({ where: { userId: adminId } })
+  if (!membership) throw new Error('Not a club member')
+
+  const expiresAt = new Date()
+  expiresAt.setDate(expiresAt.getDate() + 7)
+
+  return prisma.invitation.create({
+    data: {
+      clubId: membership.clubId,
+      invitedById: adminId,
+      email: data.email,
+      firstName: data.firstName,
+      lastName: data.lastName,
+      role: data.role,
+      groupName: data.groupName,
+      expiresAt,
+    },
+  })
+}
+
+export async function listInvitations(adminId: number) {
+  const membership = await prisma.clubMember.findFirst({ where: { userId: adminId } })
+  if (!membership) throw new Error('Not a club member')
+
+  return prisma.invitation.findMany({
+    where: { clubId: membership.clubId, status: 'pending' },
+    include: { invitedBy: { select: { firstName: true, lastName: true } } },
+    orderBy: { createdAt: 'desc' },
+  })
+}
+
+export async function resendInvitation(adminId: number, invitationId: number) {
+  const membership = await prisma.clubMember.findFirst({ where: { userId: adminId } })
+  if (!membership) throw new Error('Not a club member')
+
+  const expiresAt = new Date()
+  expiresAt.setDate(expiresAt.getDate() + 7)
+
+  return prisma.invitation.update({
+    where: { id: invitationId, clubId: membership.clubId },
+    data: { expiresAt, createdAt: new Date() },
+  })
+}
+
+export async function deleteInvitation(adminId: number, invitationId: number) {
+  const membership = await prisma.clubMember.findFirst({ where: { userId: adminId } })
+  if (!membership) throw new Error('Not a club member')
+
+  return prisma.invitation.delete({
+    where: { id: invitationId, clubId: membership.clubId },
+  })
+}

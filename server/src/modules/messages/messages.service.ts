@@ -179,7 +179,26 @@ export async function sendMessage(threadId: number, userId: number, content: str
     },
   })
 
-  return { ...message, readBy: JSON.parse(message.readBy) as number[] }
+  const sender = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { firstName: true, lastName: true },
+  })
+
+  return {
+    ...message,
+    readBy: JSON.parse(message.readBy) as number[],
+    senderName: sender ? `${sender.firstName} ${sender.lastName}` : '',
+  }
+}
+
+export async function getThreadParticipants(threadId: number) {
+  const thread = await prisma.messageThread.findUnique({
+    where: { id: threadId },
+    select: { participants: true },
+  })
+  if (!thread) return null
+  const participantIds = JSON.parse(thread.participants) as number[]
+  return { participantIds }
 }
 
 export async function markAsRead(threadId: number, userId: number) {

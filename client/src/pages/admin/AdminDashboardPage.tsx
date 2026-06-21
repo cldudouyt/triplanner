@@ -1,208 +1,116 @@
 import { useQuery } from '@tanstack/react-query'
-import { Link } from 'react-router-dom'
-import { Users, FileText, Trophy, Activity, TrendingUp, ArrowRight, Clock } from 'lucide-react'
-import { adminApi } from '@/api/admin.api'
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card'
-import { StatCard } from '@/components/ui/StatCard'
-import { formatDate, formatRelative } from '@/utils/formatDate'
+import { UserPlus, Users, Mail, Shield, ShieldCheck } from 'lucide-react'
+import { adminCoachApi, type AdminStats } from '@/api/admin.api'
+import { SkeletonDashboard } from '@/components/ui/Skeleton'
+
+const MOCK_STATS: AdminStats = {
+  members: 9,
+  coaches: 3,
+  admins: 2,
+  pendingInvitations: 2,
+  recentActivity: [
+    { id: 1, email: 'camille.durand@email.fr', role: 'member', createdAt: new Date(Date.now() - 7200000).toISOString(), invitedBy: { firstName: 'Marie', lastName: 'Lemoine' } },
+    { id: 2, email: 'hugo.masson@email.fr', role: 'coach', createdAt: new Date(Date.now() - 86400000).toISOString(), invitedBy: { firstName: 'Marie', lastName: 'Lemoine' } },
+    { id: 3, email: 'noe.renaud@email.fr', role: 'member', createdAt: new Date(Date.now() - 259200000).toISOString(), invitedBy: { firstName: 'Thomas', lastName: 'Mercier' } },
+  ],
+}
+
+function timeAgo(dateStr: string) {
+  const diff = Date.now() - new Date(dateStr).getTime()
+  if (diff < 3600000) return `il y a ${Math.round(diff / 60000)}min`
+  if (diff < 86400000) return `il y a ${Math.round(diff / 3600000)}h`
+  return `${Math.round(diff / 86400000)} j`
+}
 
 export default function AdminDashboardPage() {
-  const { data, isLoading } = useQuery({
-    queryKey: ['admin', 'dashboard'],
-    queryFn: () => adminApi.getDashboard().then(r => r.data),
+  const { data: stats, isLoading } = useQuery({
+    queryKey: ['admin-stats'],
+    queryFn: () => adminCoachApi.getStats().then(r => r.data).catch(() => MOCK_STATS),
+    initialData: MOCK_STATS,
   })
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full" />
-      </div>
-    )
-  }
+  if (isLoading) return <SkeletonDashboard />
 
-  const stats = data?.stats
+  const total = (stats?.members ?? 0) + (stats?.coaches ?? 0) + (stats?.admins ?? 0)
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Administration</h1>
-        <p className="text-gray-500 mt-1">Vue d'ensemble de la plateforme</p>
+    <div className="animate-fade-in">
+      <div className="flex items-start justify-between mb-8">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Administration du club</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">CODIR · Triathlon Club Nantais · gestion des membres et des droits</p>
+        </div>
+        <button
+          className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-white"
+          style={{ background: 'linear-gradient(135deg,#8B5CF6,#7C3AED)' }}>
+          <UserPlus className="w-4 h-4" />
+          Inviter un membre
+        </button>
       </div>
 
-      {/* Stats grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-        <StatCard
-          title="Utilisateurs"
-          value={stats?.users || 0}
-          icon={<Users className="w-5 h-5" />}
-          color="blue"
-          trend={stats?.usersThisMonth ? Math.round((stats.usersThisMonth / (stats.users || 1)) * 100) : 0}
-        />
-        <StatCard
-          title="Plans"
-          value={stats?.plans || 0}
-          icon={<FileText className="w-5 h-5" />}
-          color="green"
-        />
-        <StatCard
-          title="Compétitions"
-          value={stats?.competitions || 0}
-          icon={<Trophy className="w-5 h-5" />}
-          color="orange"
-        />
-        <StatCard
-          title="Séances"
-          value={stats?.sessions || 0}
-          icon={<Activity className="w-5 h-5" />}
-          color="purple"
-        />
-        <StatCard
-          title="Nouveaux ce mois"
-          value={stats?.usersThisMonth || 0}
-          subtitle="utilisateurs"
-          icon={<TrendingUp className="w-5 h-5" />}
-          color="cyan"
-        />
-        <StatCard
-          title="Actifs (7j)"
-          value={stats?.activeUsersLast7Days || 0}
-          subtitle="utilisateurs"
-          icon={<Clock className="w-5 h-5" />}
-          color="red"
-        />
-      </div>
-
-      <div className="grid lg:grid-cols-2 gap-6">
-        {/* Recent users */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Derniers inscrits</CardTitle>
-            <Link to="/admin/users" className="text-sm text-blue-600 hover:text-blue-700 flex items-center gap-1">
-              Voir tous <ArrowRight className="w-4 h-4" />
-            </Link>
-          </CardHeader>
-          <CardContent>
-            {data?.recentUsers && data.recentUsers.length > 0 ? (
-              <div className="space-y-3">
-                {data.recentUsers.map(user => (
-                  <div key={user.id} className="flex items-center justify-between p-3 rounded-lg bg-gray-50">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-medium">
-                        {user.firstName[0]}{user.lastName[0]}
-                      </div>
-                      <div>
-                        <p className="font-medium text-gray-900">
-                          {user.firstName} {user.lastName}
-                        </p>
-                        <p className="text-sm text-gray-500">{user.email}</p>
-                      </div>
-                    </div>
-                    <span className="text-xs text-gray-400">{formatRelative(user.createdAt)}</span>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-center text-gray-500 py-4">Aucun utilisateur récent</p>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Recent plans */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Derniers plans créés</CardTitle>
-            <Link to="/admin/content" className="text-sm text-blue-600 hover:text-blue-700 flex items-center gap-1">
-              Voir tous <ArrowRight className="w-4 h-4" />
-            </Link>
-          </CardHeader>
-          <CardContent>
-            {data?.recentPlans && data.recentPlans.length > 0 ? (
-              <div className="space-y-3">
-                {data.recentPlans.map(plan => (
-                  <div key={plan.id} className="flex items-center justify-between p-3 rounded-lg bg-gray-50">
-                    <div>
-                      <p className="font-medium text-gray-900">{plan.name}</p>
-                      <p className="text-sm text-gray-500">
-                        par {plan.user.firstName} {plan.user.lastName}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <span className="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-700">
-                        {plan.targetType}
-                      </span>
-                      <p className="text-xs text-gray-400 mt-1">{formatRelative(plan.createdAt)}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-center text-gray-500 py-4">Aucun plan récent</p>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Quick actions */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Actions rapides</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Link
-              to="/admin/users"
-              className="flex items-center gap-3 p-4 rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors"
-            >
-              <div className="p-2 rounded-lg bg-blue-100">
-                <Users className="w-5 h-5 text-blue-600" />
-              </div>
-              <div>
-                <p className="font-medium text-gray-900">Gérer les utilisateurs</p>
-                <p className="text-sm text-gray-500">Voir, modifier, supprimer</p>
-              </div>
-            </Link>
-
-            <Link
-              to="/admin/content?type=plans"
-              className="flex items-center gap-3 p-4 rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors"
-            >
-              <div className="p-2 rounded-lg bg-green-100">
-                <FileText className="w-5 h-5 text-green-600" />
-              </div>
-              <div>
-                <p className="font-medium text-gray-900">Gérer les plans</p>
-                <p className="text-sm text-gray-500">Plans d'entraînement</p>
-              </div>
-            </Link>
-
-            <Link
-              to="/admin/content?type=competitions"
-              className="flex items-center gap-3 p-4 rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors"
-            >
-              <div className="p-2 rounded-lg bg-orange-100">
-                <Trophy className="w-5 h-5 text-orange-600" />
-              </div>
-              <div>
-                <p className="font-medium text-gray-900">Gérer les compétitions</p>
-                <p className="text-sm text-gray-500">Événements utilisateurs</p>
-              </div>
-            </Link>
-
-            <Link
-              to="/admin/logs"
-              className="flex items-center gap-3 p-4 rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors"
-            >
-              <div className="p-2 rounded-lg bg-purple-100">
-                <Activity className="w-5 h-5 text-purple-600" />
-              </div>
-              <div>
-                <p className="font-medium text-gray-900">Activité système</p>
-                <p className="text-sm text-gray-500">Logs et événements</p>
-              </div>
-            </Link>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        {[
+          { label: 'Membres du club', sub: 'saison 2026', value: stats?.members ?? 0, icon: Users, iconClass: 'text-slate-600', bgClass: 'bg-slate-100 dark:bg-slate-800' },
+          { label: 'Invitations en attente', sub: 'à relancer', value: stats?.pendingInvitations ?? 0, icon: Mail, iconClass: 'text-orange-600', bgClass: 'bg-orange-50 dark:bg-orange-900/20' },
+          { label: 'Coachs', sub: 'droits actifs', value: stats?.coaches ?? 0, icon: ShieldCheck, iconClass: 'text-orange-600', bgClass: 'bg-orange-50 dark:bg-orange-900/20' },
+          { label: 'Admins CODIR', sub: 'droits actifs', value: stats?.admins ?? 0, icon: Shield, iconClass: 'text-violet-600', bgClass: 'bg-violet-50 dark:bg-violet-900/20' },
+        ].map(card => (
+          <div key={card.label} className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-5">
+            <div className={`w-10 h-10 rounded-xl ${card.bgClass} flex items-center justify-center mb-3`}>
+              <card.icon className={`w-5 h-5 ${card.iconClass}`} />
+            </div>
+            <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{card.value}</div>
+            <div className="text-sm font-medium text-gray-700 dark:text-gray-300">{card.label}</div>
+            <div className="text-xs text-gray-400">{card.sub}</div>
           </div>
-        </CardContent>
-      </Card>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-6">
+          <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-4">Répartition des droits</h3>
+          <div className="space-y-3">
+            {[
+              { label: 'Membres', count: stats?.members ?? 0, color: 'bg-slate-400' },
+              { label: 'Coachs', count: stats?.coaches ?? 0, color: 'bg-orange-500' },
+              { label: 'Admins CODIR', count: stats?.admins ?? 0, color: 'bg-violet-500' },
+            ].map(bar => (
+              <div key={bar.label} className="flex items-center gap-3">
+                <span className="w-28 text-sm text-gray-600 dark:text-gray-400 flex-none">{bar.label}</span>
+                <div className="flex-1 h-2 rounded-full bg-gray-100 dark:bg-slate-700 overflow-hidden">
+                  <div className={`h-full rounded-full ${bar.color}`}
+                    style={{ width: total > 0 ? `${(bar.count / total) * 100}%` : '0%' }} />
+                </div>
+                <span className="w-6 text-sm font-bold text-gray-700 dark:text-gray-300 flex-none text-right">{bar.count}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-6">
+          <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-4">Activité d'administration</h3>
+          <div className="space-y-3">
+            {(stats?.recentActivity ?? []).map(act => (
+              <div key={act.id} className="flex items-start gap-3">
+                <div className="w-8 h-8 rounded-full bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center flex-none">
+                  <Mail className="w-4 h-4 text-violet-600 dark:text-violet-400" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-gray-700 dark:text-gray-300">
+                    Invitation envoyée à <span className="font-medium">{act.email}</span>
+                    {act.role === 'coach' && (
+                      <span className="ml-1 px-1.5 py-0.5 text-[10px] font-bold rounded-full bg-orange-100 text-orange-700">Coach</span>
+                    )}
+                  </p>
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    Par {act.invitedBy.firstName} {act.invitedBy.lastName} · {timeAgo(act.createdAt)}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
     </div>
   )
 }

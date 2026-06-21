@@ -1,259 +1,390 @@
-import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Plus, BookTemplate, Dumbbell } from 'lucide-react'
-import { trainingPlansApi, type CompetitionIdInput } from '@/api/trainingPlans.api'
-import { competitionsApi } from '@/api/competitions.api'
-import { formatDate } from '@/utils/formatDate'
-import { LEVELS } from '@/utils/constants'
-import { EmptyState } from '@/components/ui/EmptyState'
-import { SkeletonCard } from '@/components/ui/Skeleton'
-import clsx from 'clsx'
+import { Plus, Bell, Search, Sparkles, Check } from 'lucide-react'
+import api from '@/api/client'
+import { SPORT_COLORS } from '@/utils/constants'
+import { useAuth } from '@/context/AuthContext'
+import { SkeletonDashboard } from '@/components/ui/Skeleton'
 
-const LEVEL_BADGE_COLORS: Record<string, string> = {
-  beginner: 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300',
-  intermediate: 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300',
-  advanced: 'bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-300',
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+const SPORT_LABELS: Record<string, string> = {
+  swim: 'Natation',
+  bike: 'Vélo',
+  run: 'Course',
+  strength: 'Renforcement',
+  brick: 'Enchaînement',
+  rest: 'Repos',
+  mobility: 'Mobilité',
 }
 
-export default function TrainingPlansPage() {
-  const navigate = useNavigate()
-  const [templateModal, setTemplateModal] = useState(false)
-  const [selectedTemplate, setSelectedTemplate] = useState<number | null>(null)
-  const [startDate, setStartDate] = useState('')
-  const [selectedCompetitions, setSelectedCompetitions] = useState<CompetitionIdInput[]>([])
+function getSportLabel(type: string): string {
+  return SPORT_LABELS[type] || type
+}
 
-  const { data: plansData, isLoading } = useQuery({
-    queryKey: ['training-plans'],
-    queryFn: () => trainingPlansApi.list().then(r => r.data),
-  })
+function getSportColor(type: string): string {
+  return SPORT_COLORS[type as keyof typeof SPORT_COLORS]?.color || '#94a3b8'
+}
 
-  const plans = plansData?.data || []
+const DAY_SHORT = ['DIM', 'LUN', 'MAR', 'MER', 'JEU', 'VEN', 'SAM']
 
-  const { data: templates } = useQuery({
-    queryKey: ['training-templates'],
-    queryFn: () => trainingPlansApi.templates().then(r => r.data),
-  })
+function getDayShort(session: any, activePlan: any): string {
+  if (session.date || session.scheduledDate) {
+    return DAY_SHORT[new Date(session.date || session.scheduledDate).getDay()] ?? ''
+  }
+  if (activePlan?.startDate && session.dayOfWeek) {
+    const d = new Date(activePlan.startDate)
+    d.setDate(d.getDate() + (session.weekNumber - 1) * 7 + (session.dayOfWeek - 1))
+    return DAY_SHORT[d.getDay()] ?? ''
+  }
+  return ''
+}
 
-  const { data: competitionsData } = useQuery({
-    queryKey: ['competitions-for-link'],
-    queryFn: () => competitionsApi.list({ sortBy: 'date', sortOrder: 'asc', limit: 100 }).then(r => r.data),
-  })
+function formatDuration(val?: number | string | null): string {
+  if (!val) return '—'
+  const mins = typeof val === 'string' ? parseInt(val) : val
+  if (isNaN(mins)) return String(val)
+  const h = Math.floor(mins / 60)
+  const m = mins % 60
+  return h > 0 ? `${h}h${m > 0 ? String(m).padStart(2, '0') : ''}` : `${m}min`
+}
 
-  const toggleCompetition = (id: number) => {
-    setSelectedCompetitions(prev => {
-      const exists = prev.find(c => c.id === id)
-      if (exists) {
-        const filtered = prev.filter(c => c.id !== id)
-        if (exists.isPrimary && filtered.length > 0) {
-          return filtered.map((c, i) => ({ ...c, isPrimary: i === 0 }))
-        }
-        return filtered
+function isSessionToday(session: any, activePlan: any): boolean {
+  let d: Date
+  if (session.date || session.scheduledDate) {
+    d = new Date(session.date || session.scheduledDate)
+  } else if (activePlan?.startDate && session.dayOfWeek) {
+    d = new Date(activePlan.startDate)
+    d.setDate(d.getDate() + (session.weekNumber - 1) * 7 + (session.dayOfWeek - 1))
+  } else {
+    return false
+  }
+  return d.toDateString() === new Date().toDateString()
+}
+
+function formatSessionDate(session: any, activePlan: any): string {
+  let d: Date
+  if (session.date || session.scheduledDate) {
+    d = new Date(session.date || session.scheduledDate)
+  } else if (activePlan?.startDate && session.dayOfWeek) {
+    d = new Date(activePlan.startDate)
+    d.setDate(d.getDate() + (session.weekNumber - 1) * 7 + (session.dayOfWeek - 1))
+  } else {
+    return ''
+  }
+  return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })
+}
+
+function parseBlocks(desc?: string | null): { title: string; duration: string; body: string }[] {
+  if (!desc) return []
+  return desc
+    .split(/\n\n+/)
+    .filter(Boolean)
+    .map(p => {
+      const lines = p.trim().split('\n')
+      const firstLine = lines[0]
+      const match = firstLine.match(/^(.+?)\s+(\d+\s*min)$/i)
+      if (match) {
+        return { title: match[1], duration: match[2], body: lines.slice(1).join('\n').trim() }
       }
-      return [...prev, { id, isPrimary: prev.length === 0 }]
+      return { title: firstLine, duration: '', body: lines.slice(1).join('\n').trim() }
     })
-  }
+}
 
-  const setPrimaryCompetition = (id: number) => {
-    setSelectedCompetitions(prev =>
-      prev.map(c => ({ ...c, isPrimary: c.id === id }))
-    )
-  }
+function getWeekSessions(plan: any): any[] {
+  if (!plan?.sessions) return []
+  const now = new Date()
+  const monday = new Date(now)
+  monday.setDate(now.getDate() - ((now.getDay() + 6) % 7))
+  monday.setHours(0, 0, 0, 0)
+  const sunday = new Date(monday)
+  sunday.setDate(monday.getDate() + 6)
+  sunday.setHours(23, 59, 59, 999)
 
-  const handleCreateFromTemplate = async () => {
-    if (!selectedTemplate || !startDate) return
-    try {
-      const { data } = await trainingPlansApi.createFromTemplate(selectedTemplate, {
-        competitionIds: selectedCompetitions.length > 0 ? selectedCompetitions : undefined,
-        startDate,
-      })
-      navigate(`/training/${data.id}`)
-    } catch {
-      alert('Erreur lors de la création du plan')
+  return plan.sessions
+    .filter((s: any) => {
+      let d: Date
+      if (s.date || s.scheduledDate) {
+        d = new Date(s.date || s.scheduledDate)
+      } else if (plan.startDate && s.dayOfWeek) {
+        d = new Date(plan.startDate)
+        d.setDate(d.getDate() + (s.weekNumber - 1) * 7 + (s.dayOfWeek - 1))
+      } else {
+        return false
+      }
+      return d >= monday && d <= sunday
+    })
+    .sort((a: any, b: any) => (a.dayOfWeek || 0) - (b.dayOfWeek || 0))
+}
+
+// ── Component ────────────────────────────────────────────────────────────────
+
+export default function TrainingPlansPage() {
+  const { user } = useAuth()
+  const [selected, setSelected] = useState<any | null>(null)
+
+  const { data: activePlan, isLoading } = useQuery({
+    queryKey: ['active-plan'],
+    queryFn: () =>
+      api
+        .get('/training-plans/active')
+        .then(r => r.data)
+        .catch(() => null),
+  })
+
+  const { data: coachPlan } = useQuery({
+    queryKey: ['coach-plan', user?.id],
+    queryFn: () =>
+      api
+        .get(`/club/plan/${user!.id}/current`)
+        .then(r => r.data?.currentSuggestion ?? null)
+        .catch(() => null),
+    enabled: !!user?.id,
+  })
+
+  const weekSessions = getWeekSessions(activePlan)
+
+  // Auto-select first session when week sessions load
+  useEffect(() => {
+    if (!selected && weekSessions.length) {
+      setSelected(weekSessions[0])
     }
-  }
+  }, [weekSessions.length]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (isLoading) return <SkeletonDashboard />
+
+  const currentWeek = activePlan?.startDate
+    ? Math.max(
+        1,
+        Math.ceil(
+          (Date.now() - new Date(activePlan.startDate).getTime()) / (7 * 24 * 3600 * 1000),
+        ),
+      )
+    : 1
+  const totalWeeks = activePlan?.durationWeeks || activePlan?.totalWeeks || 0
+
+  // Volume labels: tri vs prépa (strength)
+  const triMins = weekSessions
+    .filter((s: any) => s.type !== 'strength')
+    .reduce((sum: number, s: any) => sum + (s.durationMin || s.duration || 0), 0)
+  const prepMins = weekSessions
+    .filter((s: any) => s.type === 'strength')
+    .reduce((sum: number, s: any) => sum + (s.durationMin || s.duration || 0), 0)
+  const volumeTri = formatDuration(triMins || undefined)
+  const volumePrep = prepMins > 0 ? formatDuration(prepMins) : null
+
+  const showCoachBanner = coachPlan?.status === 'sent'
 
   return (
-    <div className="animate-fade-in">
+    <div className="animate-fade-in max-w-5xl">
+      {/* ── Header ── */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Plans d'entraînement</h1>
-          <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">{plans.length} plan(s)</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Mon plan</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            {activePlan
+              ? `Semaine ${currentWeek} / ${totalWeeks} · optimisé par le coach et l'IA`
+              : 'Aucun plan actif'}
+          </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
+          <div className="relative hidden sm:block">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" aria-hidden="true" />
+            <input
+              placeholder="Rechercher une séance..."
+              aria-label="Rechercher une séance"
+              className="pl-9 pr-4 py-2 text-sm rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-500 dark:text-gray-400 focus:outline-none w-52"
+            />
+          </div>
           <button
-            onClick={() => setTemplateModal(true)}
-            className="flex items-center gap-2 px-4 py-2 text-sm border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
+            aria-label="Notifications"
+            className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-500 dark:text-gray-400 transition-colors"
           >
-            <BookTemplate className="h-4 w-4" />
-            Depuis un template
+            <Bell className="w-4 h-4" />
           </button>
-          <Link
-            to="/training/new"
-            className="flex items-center gap-2 px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          <button
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-white text-sm font-semibold transition-all hover:shadow-lg hover:shadow-orange-500/30"
+            style={{ background: 'linear-gradient(135deg, #FB923C, #EA580C)' }}
           >
-            <Plus className="h-4 w-4" />
-            Plan personnalisé
-          </Link>
+            <Plus className="w-4 h-4" />
+            <span className="hidden sm:inline">Séance</span>
+          </button>
         </div>
       </div>
 
-      {/* Templates section */}
-      {templates && templates.length > 0 && !templateModal && (
-        <div className="mb-8">
-          <h2 className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase mb-3">Templates disponibles</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-3">
-            {templates.map(t => (
-              <button
-                key={t.id}
-                onClick={() => { setSelectedTemplate(t.id); setTemplateModal(true) }}
-                className="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 p-4 text-left hover:shadow-md dark:hover:shadow-slate-900/50 transition-all hover:scale-[1.02]"
-              >
-                <h3 className="font-medium text-gray-900 dark:text-gray-100 text-sm">{t.name}</h3>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{t.durationWeeks} semaines - {t._count?.sessions || 0} séances</p>
+      {/* ── Coach banner ── */}
+      {showCoachBanner && (
+        <div
+          className="relative overflow-hidden rounded-2xl p-6 mb-6"
+          style={{
+            background: 'linear-gradient(135deg,#FB923C 0%,#F97316 52%,#EA580C 100%)',
+            boxShadow: '0 22px 54px -26px rgba(234,88,12,.6)',
+          }}
+        >
+          {/* Orbe déco */}
+          <div className="absolute -top-16 -right-8 w-56 h-56 rounded-full bg-white/10 pointer-events-none" />
+
+          <div className="relative">
+            {/* Badges + timestamp */}
+            <div className="flex items-center gap-2 mb-4">
+              <span className="inline-flex items-center gap-1.5 bg-white/25 text-white text-xs font-semibold px-3 py-1 rounded-full">
+                <Sparkles className="w-3 h-3" /> Optimisé par IA
+              </span>
+              <span className="inline-flex items-center gap-1.5 bg-white/25 text-white text-xs font-semibold px-3 py-1 rounded-full">
+                ↔ Prépa physique incluse
+              </span>
+              <span className="ml-auto text-xs text-white/60">Reçu il y a 2h</span>
+            </div>
+
+            {/* Titre + bouton accepter */}
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-2xl font-bold text-white">
+                Plan du coach · Semaine {activePlan?.currentWeek ?? currentWeek} /{' '}
+                {activePlan?.totalWeeks ?? totalWeeks}
+              </h2>
+              <button className="flex items-center gap-2 bg-white text-orange-700 font-semibold px-5 py-2.5 rounded-xl hover:bg-orange-50 shadow-lg transition-all text-sm">
+                <Check className="w-4 h-4" /> Accepter le plan
               </button>
-            ))}
+            </div>
+
+            {/* Citation coach */}
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-white/30 flex items-center justify-center text-white text-xs font-bold flex-none">
+                TM
+              </div>
+              <p className="text-sm text-white/90 italic">
+                «{' '}
+                {coachPlan.coachNote ||
+                  'Belle régularité Léa. On allège un peu le vélo et on cale le renfo avec Julie, focus technique natation.'}{' '}
+                »
+              </p>
+            </div>
           </div>
         </div>
       )}
 
-      {/* User plans */}
-      {isLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {[...Array(6)].map((_, i) => (
-            <SkeletonCard key={i} />
-          ))}
-        </div>
-      ) : plans.length === 0 ? (
-        <EmptyState
-          variant="training"
-          action={{
-            label: 'Créer un plan',
-            href: '/training/new',
-          }}
-          secondaryAction={{
-            label: 'Utiliser un template',
-            onClick: () => setTemplateModal(true),
-          }}
-        />
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {plans.map(plan => (
-            <Link
-              key={plan.id}
-              to={`/training/${plan.id}`}
-              className="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 p-5 hover:shadow-md dark:hover:shadow-slate-900/50 transition-all hover:scale-[1.02]"
-            >
-              <div className="flex items-center gap-2">
-                <h3 className="font-semibold text-gray-900 dark:text-gray-100">{plan.name}</h3>
-                {plan.level && (() => {
-                  const levelConfig = LEVELS.find(l => l.value === plan.level)
-                  return levelConfig ? (
-                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${LEVEL_BADGE_COLORS[plan.level] || 'bg-gray-100 text-gray-700 dark:bg-slate-700 dark:text-gray-300'}`}>
-                      {levelConfig.label}
-                    </span>
-                  ) : null
-                })()}
-              </div>
-              {plan.competitions && plan.competitions.length > 0 && (
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  {plan.competitions.length} objectif(s) : {plan.competitions.map(pc => pc.competition.name).join(', ')}
-                </p>
-              )}
-              <div className="flex items-center gap-3 mt-3 text-sm text-gray-500 dark:text-gray-400">
-                <span>{plan.durationWeeks} semaines</span>
-                <span>{plan._count?.sessions || 0} séances</span>
-              </div>
-              {plan.startDate && (
-                <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
-                  Du {formatDate(plan.startDate)} au {plan.endDate ? formatDate(plan.endDate) : '...'}
-                </p>
-              )}
-            </Link>
-          ))}
-        </div>
-      )}
+      {/* ── 2-column layout ── */}
+      {activePlan ? (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+          {/* Col gauche — liste séances */}
+          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 overflow-hidden">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-slate-700">
+              <h3 className="font-semibold text-gray-900 dark:text-gray-100">Cette semaine</h3>
+              <span className="text-xs text-gray-500">
+                {volumeTri} tri{volumePrep ? ` · ${volumePrep} prépa` : ''}
+              </span>
+            </div>
 
-      {/* Template modal */}
-      {templateModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 animate-fade-in" onClick={() => setTemplateModal(false)}>
-          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-xl w-full max-w-md mx-4 p-6 animate-scale-in" onClick={e => e.stopPropagation()}>
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Créer depuis un template</h2>
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Template</label>
-                <select
-                  value={selectedTemplate || ''}
-                  onChange={e => setSelectedTemplate(Number(e.target.value))}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100"
+            {weekSessions.length === 0 ? (
+              <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-8">
+                Aucune séance cette semaine
+              </p>
+            ) : (
+              weekSessions.map((session: any) => (
+                <button
+                  key={session.id}
+                  onClick={() => setSelected(session)}
+                  className={`w-full flex items-center gap-3 px-5 py-3.5 text-left transition-all border-l-[3px] ${
+                    selected?.id === session.id
+                      ? 'border-orange-500 bg-orange-500/8 dark:bg-orange-900/10'
+                      : 'border-transparent hover:bg-gray-50 dark:hover:bg-slate-700/50'
+                  }`}
                 >
-                  <option value="" className="dark:bg-slate-700">Sélectionner...</option>
-                  {templates?.map(t => (
-                    <option key={t.id} value={t.id} className="dark:bg-slate-700">{t.name} ({t.durationWeeks} sem.)</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Date de début</label>
-                <input
-                  type="date"
-                  value={startDate}
-                  onChange={e => setStartDate(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Compétitions cibles (optionnel)</label>
-                <div className="space-y-2 max-h-32 overflow-y-auto border border-gray-300 dark:border-slate-600 rounded-lg p-2 bg-white dark:bg-slate-700">
-                  {competitionsData?.data.length === 0 && (
-                    <p className="text-sm text-gray-400 dark:text-gray-500">Aucune compétition</p>
+                  <span className="text-xs font-bold text-gray-400 w-8 uppercase shrink-0">
+                    {getDayShort(session, activePlan)}
+                  </span>
+                  <span
+                    className="w-2 h-2 rounded-full shrink-0"
+                    style={{ backgroundColor: getSportColor(session.type) }}
+                  />
+                  <span className="flex-1 text-sm font-medium text-gray-900 dark:text-gray-100">
+                    {getSportLabel(session.type)}
+                  </span>
+                  {session.aiAdjusted && (
+                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300">
+                      IA
+                    </span>
                   )}
-                  {competitionsData?.data.map(c => {
-                    const isSelected = selectedCompetitions.some(s => s.id === c.id)
-                    const isPrimary = selectedCompetitions.find(s => s.id === c.id)?.isPrimary
-                    return (
-                      <label key={c.id} className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-slate-600 p-1 rounded text-sm transition-colors">
-                        <input
-                          type="checkbox"
-                          checked={isSelected}
-                          onChange={() => toggleCompetition(c.id)}
-                          className="h-4 w-4 text-blue-600 rounded"
-                        />
-                        <button
-                          type="button"
-                          onClick={(e) => { e.preventDefault(); if (isSelected) setPrimaryCompetition(c.id) }}
-                          className={clsx(
-                            isPrimary ? 'text-yellow-500' : 'text-gray-300 dark:text-gray-500',
-                            !isSelected ? 'opacity-30' : 'hover:text-yellow-400'
-                          )}
-                          disabled={!isSelected}
-                        >
-                          ⭐
-                        </button>
-                        <span className="text-gray-700 dark:text-gray-300">{c.name} - {formatDate(c.date)}</span>
-                      </label>
-                    )
-                  })}
+                  <span className="text-sm font-mono text-gray-500 dark:text-gray-400 shrink-0">
+                    {formatDuration(session.durationMin || session.duration)}
+                  </span>
+                </button>
+              ))
+            )}
+          </div>
+
+          {/* Col droite — détail séance */}
+          {selected ? (
+            <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 p-5">
+              <div className="flex items-start justify-between mb-3">
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span
+                      className="font-semibold text-sm"
+                      style={{ color: getSportColor(selected.type) }}
+                    >
+                      {getSportLabel(selected.type)}
+                    </span>
+                    {isSessionToday(selected, activePlan) && (
+                      <span className="text-xs bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 px-2 py-0.5 rounded-full font-medium">
+                        Aujourd'hui
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    {formatSessionDate(selected, activePlan)}
+                    {(selected.sessionType || selected.title)
+                      ? ` · ${selected.sessionType || selected.title}`
+                      : ''}
+                  </p>
+                </div>
+                <div className="text-right shrink-0">
+                  <p className="text-2xl font-mono font-bold text-gray-900 dark:text-gray-100">
+                    {formatDuration(selected.durationMin || selected.duration)}
+                  </p>
+                  <p className="text-xs text-gray-400">durée</p>
                 </div>
               </div>
-            </div>
 
-            <div className="flex justify-end gap-3 mt-6">
-              <button onClick={() => setTemplateModal(false)} className="px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors">
-                Annuler
-              </button>
-              <button
-                onClick={handleCreateFromTemplate}
-                disabled={!selectedTemplate || !startDate}
-                className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
-              >
-                Créer le plan
+              {selected.intensity && (
+                <span className="inline-block text-xs font-medium px-3 py-1 rounded-full bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300 mb-4">
+                  {selected.intensity}
+                </span>
+              )}
+
+              <div className="space-y-3">
+                {parseBlocks(selected.description).map((block, i) => (
+                  <div key={i} className="bg-gray-50 dark:bg-slate-700/50 rounded-xl p-4">
+                    <div className="flex justify-between mb-1">
+                      <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                        {block.title}
+                      </p>
+                      {block.duration && (
+                        <p className="text-xs text-gray-400 shrink-0">{block.duration}</p>
+                      )}
+                    </div>
+                    {block.body && (
+                      <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed whitespace-pre-line">
+                        {block.body}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              <button className="w-full mt-4 py-2.5 rounded-xl bg-gradient-to-br from-orange-400 to-orange-600 text-white text-sm font-semibold hover:shadow-lg hover:shadow-orange-500/30 transition-all">
+                Marquer comme faite
               </button>
             </div>
-          </div>
+          ) : (
+            <div className="flex items-center justify-center rounded-2xl border-2 border-dashed border-gray-100 dark:border-slate-700 text-gray-400 dark:text-gray-600 text-sm min-h-[200px]">
+              Sélectionnez une séance pour voir les détails
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="text-center py-16 text-gray-500 dark:text-gray-400">
+          <p className="text-sm">Aucun plan d'entraînement actif.</p>
         </div>
       )}
     </div>

@@ -1,5 +1,5 @@
 import prisma from '../../config/database.js'
-import type { Competition, TrainingSession } from '../../../generated/prisma/client.js'
+import type { Competition, TrainingSession } from '../../../generated/prisma/index.js'
 
 export async function getPreferences(userId: number) {
   let prefs = await prisma.notificationPreferences.findUnique({ where: { userId } })

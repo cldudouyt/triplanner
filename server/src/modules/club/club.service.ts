@@ -1,11 +1,6 @@
 import prisma from '../../config/database.js'
-
-const MOCK_SUGGESTIONS = [
-  { id: 'reduce_volume', title: 'Charge hebdo allégée', delta: '−30 min', why: 'Forme en baisse, récup prioritaire', enabled: true },
-  { id: 'focus_swim', title: 'Focus natation', delta: '+15 min', why: 'Point de progression identifié', enabled: true },
-  { id: 'extra_recovery', title: 'Récup renforcée', delta: '+1 séance', why: 'Charge cumulée élevée', enabled: false },
-  { id: 'sync_phys', title: 'Synchro prépa physique', delta: '3 séances', why: 'Julie B. confirmée', enabled: true },
-]
+import { generateCoachSuggestions } from '../ai/ai.service.js'
+import { getTrainingLoad } from '../statistics/statistics.service.js'
 
 export async function getClubInfo(userId: number) {
   const membership = await prisma.clubMember.findFirst({
@@ -130,20 +125,51 @@ export async function generateSuggestions(
 
   if (!athleteMembership) return null
 
+  // Fetch athlete context for AI
+  const [athlete, plan, loadPoints, recentWellness, nextComp] = await Promise.all([
+    prisma.user.findUnique({ where: { id: athleteId }, select: { firstName: true, lastName: true } }),
+    prisma.trainingPlan.findUnique({ where: { id: planId }, select: { name: true } }),
+    getTrainingLoad(athleteId, 42).catch(() => []),
+    prisma.wellnessLog.findFirst({
+      where: { userId: athleteId },
+      orderBy: { date: 'desc' },
+      select: { fatigue: true, readinessScore: true },
+    }),
+    prisma.competition.findFirst({
+      where: { userId: athleteId, date: { gte: new Date() } },
+      orderBy: { date: 'asc' },
+      select: { name: true, date: true },
+    }),
+  ])
+
+  const latestLoad = loadPoints[loadPoints.length - 1]
+
+  const aiSuggestions = await generateCoachSuggestions({
+    athleteName: athlete ? `${athlete.firstName} ${athlete.lastName}` : 'Athlète',
+    planName: plan?.name ?? 'Plan',
+    weekNumber,
+    ctl: latestLoad?.ctl ?? 0,
+    tsb: latestLoad?.tsb ?? 0,
+    recentWellness: recentWellness ?? undefined,
+    nextCompetition: nextComp
+      ? { name: nextComp.name, daysUntil: Math.ceil((nextComp.date.getTime() - Date.now()) / 86400000) }
+      : undefined,
+  })
+
   const suggestion = await prisma.coachPlanSuggestion.create({
     data: {
       coachId,
       athleteId,
       planId,
       weekNumber,
-      suggestions: JSON.stringify(MOCK_SUGGESTIONS),
+      suggestions: JSON.stringify(aiSuggestions),
       status: 'draft',
     },
   })
 
   return {
     ...suggestion,
-    suggestions: JSON.parse(suggestion.suggestions) as typeof MOCK_SUGGESTIONS,
+    suggestions: aiSuggestions,
   }
 }
 
@@ -202,6 +228,44 @@ export async function respondToPlan(
     ...updated,
     suggestions: JSON.parse(updated.suggestions),
   }
+}
+
+export async function getClubDirectory(userId: number, group?: string) {
+  const membership = await prisma.clubMember.findFirst({ where: { userId } })
+  if (!membership) return null
+
+  const members = await prisma.clubMember.findMany({
+    where: { clubId: membership.clubId },
+    include: {
+      user: {
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          email: true,
+          groupMemberships: {
+            include: { group: { select: { name: true } } },
+            take: 1,
+          },
+        },
+      },
+    },
+    orderBy: { createdAt: 'asc' },
+  })
+
+  const result = members
+    .filter(m => !group || m.user.groupMemberships[0]?.group?.name === group)
+    .map(m => ({
+      id: m.userId,
+      firstName: m.user.firstName,
+      lastName: m.user.lastName,
+      email: m.user.email,
+      role: m.role,
+      group: m.user.groupMemberships[0]?.group?.name ?? null,
+      isMe: m.userId === userId,
+    }))
+
+  return result
 }
 
 export async function getAthletePlan(athleteId: number) {

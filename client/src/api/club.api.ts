@@ -44,7 +44,7 @@ export interface PlanSuggestion {
 }
 
 export const clubApi = {
-  getInfo: () => api.get<ClubInfo & { stats: ClubStats }>('/club'),
+  getInfo: () => api.get<{ club: ClubInfo | null; role: 'coach' | 'athlete' | null; stats: ClubStats }>('/club'),
   getRoster: () => api.get<RosterAthlete[]>('/club/roster'),
   generateSuggestions: (data: { athleteId: number; planId: number; weekNumber: number }) =>
     api.post<PlanSuggestion>('/club/ai/generate', data),

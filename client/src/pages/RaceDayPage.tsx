@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft, Trophy, ChevronDown, ChevronUp, CheckSquare, Square, Clock, Flag } from 'lucide-react'
 import { competitionsApi } from '@/api/competitions.api'
 import { SPORT_COLORS } from '@/utils/constants'
+import NutritionPlanner from '@/components/race-day/NutritionPlanner'
 
 // --- Chrono helpers ---
 
@@ -461,6 +462,11 @@ export default function RaceDayPage() {
             </div>
           )}
         </div>
+      </div>
+
+      {/* Section Nutrition */}
+      <div className="mt-6">
+        <NutritionPlanner />
       </div>
     </div>
   )
