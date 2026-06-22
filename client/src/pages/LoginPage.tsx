@@ -47,9 +47,9 @@ export default function LoginPage() {
   }
 
   const features = [
-    { icon: ClipboardList, label: "Plan d'entraînement adaptatif" },
-    { icon: Trophy, label: "Compétitions & compte à rebours" },
-    { icon: BarChart3, label: "Suivi des 3 disciplines + stats" },
+    { icon: ClipboardList, label: "Plans adaptatifs natation · vélo · course" },
+    { icon: Trophy, label: "Compétitions A/B/C, splits & J-Day dashboard" },
+    { icon: BarChart3, label: "Stats CTL/ATL/TSB, wellness et records" },
   ]
 
   return (
@@ -76,10 +76,10 @@ export default function LoginPage() {
         {/* Hero */}
         <div className="relative">
           <h1 className="text-4xl font-bold text-white leading-tight mt-12">
-            Ton triathlon, du premier longueur à la ligne d'arrivée.
+            Votre prochaine course commence ici.
           </h1>
           <p className="text-sm text-white/80 max-w-xs mt-4">
-            Entraînement, compétitions et planification réunis. Quand tu t'entraînes en club, ton coach affine ton plan avec l'aide de l'IA.
+            Plans IA, messagerie coach, calendrier compétitions et suivi des 3 disciplines — tout votre triathlon dans un seul espace club.
           </p>
           <div className="space-y-4 mt-10">
             {features.map(f => (
@@ -100,9 +100,9 @@ export default function LoginPage() {
       {/* Panel droit */}
       <div className="flex items-center justify-center p-8 bg-white dark:bg-slate-900">
         <div className="w-full max-w-sm animate-fade-in">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Bon retour 👋</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Bon retour, triathlète 🏅</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 mb-6">
-            Connecte-toi pour accéder à ton espace.
+            Votre espace Triathlon Club Nantais vous attend.
           </p>
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
@@ -158,7 +158,7 @@ export default function LoginPage() {
           {/* Séparateur */}
           <div className="flex items-center gap-3 my-5">
             <div className="flex-1 h-px bg-gray-200 dark:bg-slate-700" />
-            <span className="text-xs text-gray-400">ou entrer en démo</span>
+            <span className="text-xs text-gray-400">ou explorer en démo</span>
             <div className="flex-1 h-px bg-gray-200 dark:bg-slate-700" />
           </div>
 
@@ -182,7 +182,7 @@ export default function LoginPage() {
                   Athlète
                 </span>
               </div>
-              <p className="text-xs text-gray-400 truncate">Mes plans, mes courses, mes stats</p>
+              <p className="text-xs text-gray-400 truncate">Plan triathlon actif · compétitions · stats live</p>
             </div>
             {demoLoading === 'athlete' ? (
               <div className="w-4 h-4 rounded-full border-2 border-orange-500 border-t-transparent animate-spin flex-none" />
@@ -208,7 +208,7 @@ export default function LoginPage() {
                   Coach
                 </span>
               </div>
-              <p className="text-xs text-gray-400 truncate">Mes athlètes, mes groupes, mes plans</p>
+              <p className="text-xs text-gray-400 truncate">Coach TCN · 4 groupes · plans IA & messagerie</p>
             </div>
             {demoLoading === 'coach' ? (
               <div className="w-4 h-4 rounded-full border-2 border-orange-500 border-t-transparent animate-spin flex-none" />
@@ -237,7 +237,7 @@ export default function LoginPage() {
                   Admin CODIR
                 </span>
               </div>
-              <p className="text-xs text-gray-400 truncate">Membres, invitations, administration</p>
+              <p className="text-xs text-gray-400 truncate">CODIR TCN · membres, droits & invitations</p>
             </div>
             {demoLoading === 'admin' ? (
               <div className="w-4 h-4 rounded-full border-2 border-violet-500 border-t-transparent animate-spin flex-none" />
