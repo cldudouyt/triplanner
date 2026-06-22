@@ -27,6 +27,8 @@ jobs:
 
       - name: Generate Prisma client
         run: cd server && npx prisma generate
+        env:
+          DATABASE_URL: "postgresql://dummy:dummy@localhost/dummy"
 
       - name: TypeScript check (server)
         run: cd server && npx tsc --noEmit
