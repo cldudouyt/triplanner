@@ -2,7 +2,23 @@
 
 Application de planification triathlon : compétitions, plans d'entraînement, wellness, IA, Strava, espace club coach.
 
-## Démarrage rapide
+## URLs de production
+
+| Service | URL |
+|---------|-----|
+| Frontend (Vercel) | https://client-xi-lake.vercel.app |
+| Backend API (Railway) | https://api-production-988b.up.railway.app |
+| Health check | https://api-production-988b.up.railway.app/api/health |
+
+Comptes démo (production) :
+
+| Rôle | Email | Mot de passe |
+|------|-------|-------------|
+| Athlète | `demo@triathlon-planner.fr` | `demo1234` |
+| Coach | `thomas.mercier@triathlon-nantes.fr` | `coach1234` |
+| Admin CODIR | `marie.lemoine@triathlon-nantes.fr` | `admin1234` |
+
+## Démarrage rapide (local)
 
 ```powershell
 # Option A — Docker (recommandé, démarre PostgreSQL + backend + frontend)
@@ -14,7 +30,7 @@ cd server && npm run dev    # terminal 1
 cd client && npm run dev   # terminal 2
 ```
 
-URL : http://localhost:5173  
+URL locale : http://localhost:5173  
 Compte démo athlète : `demo@triathlon-planner.fr` / `demo1234`  
 Compte démo coach   : `thomas.mercier@triathlon-nantes.fr` / `coach1234`  
 Compte démo admin   : `marie.lemoine@triathlon-nantes.fr` / `admin1234`
@@ -292,8 +308,46 @@ cd client; npm run e2e          # auth.spec.ts + competitions.spec.ts
 
 ## Déploiement
 
+### Production — Vercel (frontend) + Railway (backend + PostgreSQL)
+
+Architecture : frontend statique sur Vercel, API Express sur Railway, PostgreSQL sur Railway.
+
 ```powershell
-# Build Docker
+# Redéployer le backend (Railway)
+cd c:\dev\TEST_Claude
+railway up --detach --message "description"
+
+# Redéployer le frontend (Vercel) — depuis client/
+cd client
+vercel --prod --yes
+
+# Repeupler la base Railway avec les démos
+cd server
+$env:DATABASE_URL = "postgresql://postgres:<password>@reseau.proxy.rlwy.net:50688/railway"
+npm run db:seed:demo
+```
+
+Variables d'environnement Railway (service `api`) :
+```
+DATABASE_URL      = postgresql://...@postgres.railway.internal:5432/railway  ← interne
+NODE_ENV          = production
+PORT              = 3001
+ACCESS_TOKEN_SECRET  = <secret>
+REFRESH_TOKEN_SECRET = <secret>
+CORS_ORIGIN       = https://client-xi-lake.vercel.app
+```
+
+Variable Vercel (projet `client`) :
+```
+VITE_API_URL = https://api-production-988b.up.railway.app
+```
+
+> **Dockerfile** : image unique `node:22-alpine`, `npm ci` (toutes deps), `npm install -g tsx`, démarre avec `tsx src/index.ts`. Pas de compilation TypeScript — tsx exécute le TS directement.
+
+### Local
+
+```powershell
+# Build Docker local
 docker build -t tri-planner .
 docker run -p 3001:3001 --env-file server/.env tri-planner
 
@@ -349,7 +403,7 @@ Health check : `GET /api/health` → `{ status, version, uptime, db, timestamp }
 | Profil utilisateur | ✅ | avatar, stats globales, repères physiologiques |
 | Admin CODIR | ✅ | sidebar violet, membres & droits, invitations |
 | PWA / Mobile | ✅ | manifest.webmanifest, favicon SVG orange |
-| Déploiement | ✅ | Dockerfile multi-stage, docker-compose, CI/CD GitHub Actions |
+| Déploiement | ✅ | Vercel (frontend) + Railway (backend + PostgreSQL), docker-compose local, CI/CD GitHub Actions |
 | Sécurité | ✅ | helmet, rate limiting IA, pino logs, Sentry, validation Zod |
 | Tests unitaires | ✅ | 34 tests Vitest (statistics + wellness services) |
 | Tests E2E | ✅ | Playwright auth + competitions |
