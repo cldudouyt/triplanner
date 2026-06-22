@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { Search, Bell, Plus } from 'lucide-react'
+import { Search, Bell } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import api from '@/api/client'
 import { SkeletonStatCard } from '@/components/ui/Skeleton'
@@ -95,12 +95,6 @@ export default function StatisticsPage() {
             className="p-2 rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
           >
             <Bell className="h-4 w-4" />
-          </button>
-          <button
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-white text-sm font-semibold transition-all hover:shadow-lg hover:shadow-orange-500/30"
-            style={{ background: 'linear-gradient(135deg, #FB923C, #EA580C)' }}
-          >
-            <Plus className="w-4 h-4" /> <span className="hidden sm:inline">Séance</span>
           </button>
         </div>
       </div>
