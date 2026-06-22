@@ -73,6 +73,8 @@ jobs:
 
       - name: Generate Prisma client
         run: cd server && npx prisma generate
+        env:
+          DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/triplan_test"
 
       - name: Setup test database
         run: cd server && npx prisma db push
